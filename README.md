@@ -1,5 +1,7 @@
 # MTG Draft Meta Analyzer
 
+> **[📊 ECL Draft Guide (Live)](https://mtg-ecl-draft-guide.netlify.app/ecl_premierdraft_2026-01-24_draft_guide)** | **[📖 Metrics Guide](./METRICS_GUIDE.md)**
+
 17lands 데이터를 활용한 MTG Arena 드래프트 메타 분석 시스템
 
 ## Live Demo

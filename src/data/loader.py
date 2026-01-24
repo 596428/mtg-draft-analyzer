@@ -12,6 +12,28 @@ from src.models.card import CardStats
 logger = logging.getLogger(__name__)
 
 
+def normalize_color_pair(colors: str) -> str:
+    """
+    Normalize color pair to WUBRG alphabetical order for 17lands API.
+
+    17lands API expects color pairs in WUBRG order (W < U < B < R < G).
+    For example: WG not GW, WR not RW, UG not GU.
+
+    Args:
+        colors: Two-letter color pair (e.g., "GW", "RW", "GU")
+
+    Returns:
+        Normalized color pair in WUBRG order (e.g., "WG", "WR", "UG")
+    """
+    if len(colors) != 2:
+        return colors
+    wubrg_order = "WUBRG"
+    c1, c2 = colors[0].upper(), colors[1].upper()
+    if wubrg_order.index(c1) > wubrg_order.index(c2):
+        return c2 + c1
+    return colors
+
+
 class SeventeenLandsLoader:
     """Client for 17lands.com API."""
 
@@ -203,11 +225,12 @@ class SeventeenLandsLoader:
                 logger.info(f"Using cached archetype ratings for {expansion} {colors}")
                 return cached
 
-        logger.info(f"Fetching archetype card ratings for {expansion} {colors}")
+        normalized_colors = normalize_color_pair(colors)
+        logger.info(f"Fetching archetype card ratings for {expansion} {colors} (API: {normalized_colors})")
         params = {
             "expansion": expansion,
             "format": format,
-            "colors": colors,
+            "colors": normalized_colors,
         }
 
         raw_data = self._make_request(self.CARD_RATINGS_ENDPOINT, params)

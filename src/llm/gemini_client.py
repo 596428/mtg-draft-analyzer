@@ -1,0 +1,163 @@
+"""Gemini API client for LLM analysis."""
+
+import logging
+import os
+from typing import Optional
+
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+from src.llm.prompt_builder import PromptBuilder
+from src.models.card import Card
+from src.models.meta import MetaSnapshot
+
+logger = logging.getLogger(__name__)
+
+
+class GeminiClient:
+    """Client for Google Gemini API."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gemini-2.0-flash",
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ):
+        """
+        Initialize Gemini client.
+
+        Args:
+            api_key: Gemini API key (defaults to GEMINI_API_KEY env var)
+            model: Model to use
+            max_tokens: Maximum response tokens
+            temperature: Sampling temperature
+        """
+        load_dotenv()
+
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            logger.warning(
+                "No Gemini API key found. LLM analysis will be disabled."
+            )
+            self.enabled = False
+            return
+
+        self.enabled = True
+        self.model_name = model
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+
+        # Configure API
+        genai.configure(api_key=self.api_key)
+        self.model = genai.GenerativeModel(model)
+        self.prompt_builder = PromptBuilder()
+
+    def _generate(self, prompt: str) -> Optional[str]:
+        """
+        Generate response from Gemini.
+
+        Args:
+            prompt: Input prompt
+
+        Returns:
+            Generated text or None on failure
+        """
+        if not self.enabled:
+            logger.warning("Gemini client is disabled (no API key)")
+            return None
+
+        try:
+            generation_config = genai.GenerationConfig(
+                max_output_tokens=self.max_tokens,
+                temperature=self.temperature,
+            )
+
+            response = self.model.generate_content(
+                prompt,
+                generation_config=generation_config,
+            )
+
+            if response and response.text:
+                return response.text
+            else:
+                logger.warning("Empty response from Gemini")
+                return None
+
+        except Exception as e:
+            logger.error(f"Gemini API error: {e}")
+            return None
+
+    def analyze_meta(self, snapshot: MetaSnapshot) -> Optional[str]:
+        """
+        Generate meta analysis for a snapshot.
+
+        Args:
+            snapshot: MetaSnapshot to analyze
+
+        Returns:
+            Analysis text or None
+        """
+        prompt = self.prompt_builder.build_meta_prompt(snapshot)
+        logger.info(f"Generating meta analysis for {snapshot.expansion}")
+
+        return self._generate(prompt)
+
+    def analyze_card(self, card: Card) -> Optional[str]:
+        """
+        Generate card-specific analysis.
+
+        Args:
+            card: Card to analyze
+
+        Returns:
+            Analysis text or None
+        """
+        prompt = self.prompt_builder.build_card_prompt(card)
+        logger.info(f"Generating card analysis for {card.name}")
+
+        return self._generate(prompt)
+
+    def get_strategy_tips(self, snapshot: MetaSnapshot) -> Optional[str]:
+        """
+        Generate strategic tips for a format.
+
+        Args:
+            snapshot: MetaSnapshot to analyze
+
+        Returns:
+            Strategy tips text or None
+        """
+        prompt = self.prompt_builder.build_strategy_prompt(snapshot)
+        logger.info(f"Generating strategy tips for {snapshot.expansion}")
+
+        return self._generate(prompt)
+
+    def enrich_snapshot(
+        self,
+        snapshot: MetaSnapshot,
+        include_meta: bool = True,
+        include_strategy: bool = True,
+    ) -> MetaSnapshot:
+        """
+        Enrich snapshot with LLM analysis.
+
+        Args:
+            snapshot: MetaSnapshot to enrich
+            include_meta: Whether to include meta analysis
+            include_strategy: Whether to include strategy tips
+
+        Returns:
+            Enriched snapshot
+        """
+        if not self.enabled:
+            logger.warning("Skipping LLM enrichment (client disabled)")
+            return snapshot
+
+        if include_meta:
+            snapshot.llm_meta_analysis = self.analyze_meta(snapshot)
+
+        if include_strategy:
+            snapshot.llm_strategy_tips = self.get_strategy_tips(snapshot)
+
+        return snapshot

@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ expansion }} {{ format }} Draft Guide</title>
+    <style>
+        /* ============================================
+           CSS VARIABLES & THEME
+           ============================================ */
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-card: #1c2128;
+            --bg-hover: #30363d;
+
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+
+            --border-color: #30363d;
+            --border-light: #21262d;
+
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-yellow: #d29922;
+            --accent-orange: #db6d28;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+
+            /* MTG Color scheme */
+            --mtg-white: #f8f6d8;
+            --mtg-blue: #0e68ab;
+            --mtg-black: #2b2b2b;
+            --mtg-red: #d3202a;
+            --mtg-green: #00733e;
+
+            /* Grade colors */
+            --grade-aplus: #ffd700;
+            --grade-a: #3fb950;
+            --grade-aminus: #7ee787;
+            --grade-bplus: #58a6ff;
+            --grade-b: #79c0ff;
+            --grade-bminus: #a5d6ff;
+            --grade-cplus: #d29922;
+            --grade-c: #e3b341;
+            --grade-cminus: #f0c14b;
+            --grade-d: #db6d28;
+            --grade-f: #f85149;
+
+            --card-width: 180px;
+            --card-width-sm: 146px;
+            --border-radius: 8px;
+            --transition: 0.2s ease;
+        }
+
+        /* ============================================
+           RESET & BASE STYLES
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* ============================================
+           LAYOUT
+           ============================================ */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        section {
+            margin: 30px 0;
+            padding: 25px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+        }
+
+        section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        section h3 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 20px 0 15px;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           STAT CARDS (FORMAT OVERVIEW)
+           ============================================ */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .stat-card .label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            display: block;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-card .value.fast { color: var(--accent-red); }
+        .stat-card .value.slow { color: var(--accent-blue); }
+        .stat-card .value.high { color: var(--accent-green); }
+        .stat-card .value.low { color: var(--accent-orange); }
+
+        /* ============================================
+           COLOR RANKINGS
+           ============================================ */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .color-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .color-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .color-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-card[data-color="W"] { border-top: 4px solid var(--mtg-white); }
+        .color-card[data-color="U"] { border-top: 4px solid var(--mtg-blue); }
+        .color-card[data-color="B"] { border-top: 4px solid #6b5b95; }
+        .color-card[data-color="R"] { border-top: 4px solid var(--mtg-red); }
+        .color-card[data-color="G"] { border-top: 4px solid var(--mtg-green); }
+
+        .color-card .color-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .color-card .color-name {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .color-card .rank {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .color-card .score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .color-card .top-cards {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-light);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-align: left;
+        }
+
+        .color-card .top-cards li {
+            list-style: none;
+            padding: 3px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ============================================
+           ARCHETYPE TABS
+           ============================================ */
+        .archetype-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .archetype-tabs button {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .archetype-tabs button:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .archetype-tabs button.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .arch-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .arch-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .arch-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .arch-header h3 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--text-primary);
+        }
+
+        .arch-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .arch-stat {
+            text-align: center;
+        }
+
+        .arch-stat .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .arch-stat .value {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* ============================================
+           CARD GRID & CARDS
+           ============================================ */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .filter-buttons button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 5px 12px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-buttons button:hover {
+            background: var(--bg-hover);
+        }
+
+        .filter-buttons button.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(var(--card-width-sm), 1fr));
+            }
+        }
+
+        .card-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .card-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+        }
+
+        .card-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .card-item img[loading="lazy"] {
+            background: var(--bg-tertiary);
+            min-height: 250px;
+        }
+
+        .card-info {
+            padding: 10px;
+        }
+
+        .card-info .name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .card-info .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .grade {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .grade-aplus { background: var(--grade-aplus); color: #000; }
+        .grade-a { background: var(--grade-a); color: #fff; }
+        .grade-aminus { background: var(--grade-aminus); color: #000; }
+        .grade-bplus { background: var(--grade-bplus); color: #fff; }
+        .grade-b { background: var(--grade-b); color: #000; }
+        .grade-bminus { background: var(--grade-bminus); color: #000; }
+        .grade-cplus { background: var(--grade-cplus); color: #000; }
+        .grade-c { background: var(--grade-c); color: #000; }
+        .grade-cminus { background: var(--grade-cminus); color: #000; }
+        .grade-d { background: var(--grade-d); color: #fff; }
+        .grade-f { background: var(--grade-f); color: #fff; }
+
+        .win-rate {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           SPECIAL CARDS (SLEEPERS & TRAPS)
+           ============================================ */
+        .special-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .special-cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .special-section h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .special-section h3 .icon {
+            font-size: 1.5rem;
+        }
+
+        .special-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .special-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .special-card:hover {
+            background: var(--bg-hover);
+        }
+
+        .special-card.sleeper {
+            border-left: 3px solid var(--accent-green);
+        }
+
+        .special-card.trap {
+            border-left: 3px solid var(--accent-red);
+        }
+
+        .special-card img {
+            width: 60px;
+            border-radius: 4px;
+        }
+
+        .special-card .info {
+            flex: 1;
+        }
+
+        .special-card .name {
+            font-weight: 500;
+            margin-bottom: 3px;
+        }
+
+        .special-card .deviation {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .special-card .deviation.positive {
+            color: var(--accent-green);
+        }
+
+        .special-card .deviation.negative {
+            color: var(--accent-red);
+        }
+
+        /* ============================================
+           CARD MODAL
+           ============================================ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+            display: flex;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                flex-direction: column;
+                padding: 20px;
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--bg-card);
+            border: none;
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+        }
+
+        .modal-image {
+            flex-shrink: 0;
+        }
+
+        .modal-image img {
+            width: 300px;
+            border-radius: var(--border-radius);
+        }
+
+        .modal-details h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .modal-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .modal-stat {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: var(--border-radius);
+        }
+
+        .modal-stat .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .modal-stat .value {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* ============================================
+           SEARCH
+           ============================================ */
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+        }
+
+        /* ============================================
+           TABLE STYLES
+           ============================================ */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--bg-card);
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+        }
+
+        /* ============================================
+           UTILITIES
+           ============================================ */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .card-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .card-row .card-item {
+            width: var(--card-width-sm);
+            flex-shrink: 0;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- ==========================================
+         HEADER
+         ========================================== -->
+    <header>
+        <h1>{{ expansion }} Draft Guide</h1>
+        <p class="subtitle">{{ format }} | Generated: {{ timestamp }} | {{ total_games | format_number }} games analyzed</p>
+    </header>
+
+    <div class="container">
+        <!-- ==========================================
+             FORMAT OVERVIEW
+             ========================================== -->
+        <section id="format-overview">
+            <h2>📊 Format Overview</h2>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <span class="label">Total Cards</span>
+                    <span class="value">{{ total_cards }}</span>
+                </div>
+                {% if format_speed %}
+                <div class="stat-card">
+                    <span class="label">Format Speed</span>
+                    <span class="value {% if '빠' in format_speed.speed_label or '고속' in format_speed.speed_label %}fast{% elif '느' in format_speed.speed_label %}slow{% endif %}">{{ format_speed.speed_label }}</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">Tempo Ratio (OH/GD)</span>
+                    <span class="value">{{ "%.3f" | format(format_speed.tempo_ratio) }}</span>
+                </div>
+                {% endif %}
+                {% if splash_indicator %}
+                <div class="stat-card">
+                    <span class="label">Splash Viability</span>
+                    <span class="value {% if '높' in splash_indicator.splash_label %}high{% elif '낮' in splash_indicator.splash_label %}low{% endif %}">{{ splash_indicator.splash_label }}</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">Dual Land ALSA</span>
+                    <span class="value">{{ "%.1f" | format(splash_indicator.dual_land_alsa) }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if format_speed and format_speed.recommendation %}
+            <div style="margin-top: 20px; padding: 15px; background: var(--bg-card); border-radius: var(--border-radius); border-left: 4px solid var(--accent-blue);">
+                <strong>💡 Strategy Tip:</strong> {{ format_speed.recommendation }}
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- ==========================================
+             COLOR RANKINGS
+             ========================================== -->
+        <section id="color-rankings">
+            <h2>🎨 Color Rankings</h2>
+            <div class="color-grid">
+                {% for color in color_strengths %}
+                <div class="color-card" data-color="{{ color.color }}">
+                    <div class="color-icon">{{ color_icons.get(color.color, '⬜') }}</div>
+                    <div class="color-name">{{ color_names.get(color.color, color.color) }}</div>
+                    <div class="rank">#{{ color.rank }}</div>
+                    <div class="score">{{ "%.1f" | format(color.strength_score) }}</div>
+                    {% if color.top_commons %}
+                    <ul class="top-cards">
+                        <li><strong>Top Commons:</strong></li>
+                        {% for card_name in color.top_commons[:3] %}
+                        <li>• {{ card_name }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ==========================================
+             ARCHETYPE GUIDE
+             ========================================== -->
+        <section id="archetypes">
+            <h2>🏛️ Archetypes</h2>
+            <div class="archetype-tabs">
+                {% for arch in archetypes %}
+                <button data-arch="{{ arch.colors }}" {% if loop.first %}class="active"{% endif %}>
+                    {{ arch.guild_name }} ({{ arch.colors }})
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="archetype-content">
+                {% for item in archetypes_data %}
+                {% set arch = item.archetype %}
+                <div class="arch-panel {% if loop.first %}active{% endif %}" id="arch-{{ arch.colors }}">
+                    <div class="arch-header">
+                        <h3>{{ arch.guild_name }} ({{ arch.colors }})</h3>
+                        <div class="arch-stats">
+                            <div class="arch-stat">
+                                <div class="label">Win Rate</div>
+                                <div class="value">{{ arch.win_rate | percent2 }}</div>
+                            </div>
+                            <div class="arch-stat">
+                                <div class="label">Rank</div>
+                                <div class="value">#{{ arch.rank }}</div>
+                            </div>
+                            <div class="arch-stat">
+                                <div class="label">Synergy Lift</div>
+                                <div class="value">{{ arch.synergy_lift | percent }}</div>
+                            </div>
+                            <div class="arch-stat">
+                                <div class="label">Meta Share</div>
+                                <div class="value">{{ arch.meta_share | percent }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if arch.signpost_uncommon %}
+                    <p style="margin-bottom: 15px; color: var(--text-secondary);">
+                        <strong>Signpost:</strong> {{ arch.signpost_uncommon }}
+                    </p>
+                    {% endif %}
+
+                    <h4 style="margin: 20px 0 10px;">Key Cards</h4>
+                    <div class="card-row">
+                        {% for card in item.top_cards[:6] %}
+                        {% if card.image_uri %}
+                        <div class="card-item"
+                             data-name="{{ card.name }}"
+                             data-grade="{{ card.grade }}"
+                             data-colors="{{ card.colors }}"
+                             data-rarity="{{ card.rarity.value }}"
+                             data-wr="{{ card.stats.gih_wr }}"
+                             data-score="{{ card.composite_score }}"
+                             onclick="showCardModal(this)">
+                            <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                            <div class="card-info">
+                                <span class="name">{{ card.name }}</span>
+                                <div class="stats">
+                                    <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                    <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    {% if arch.key_commons %}
+                    <h4 style="margin: 20px 0 10px;">Key Commons</h4>
+                    <p style="color: var(--text-secondary);">{{ arch.key_commons | join(', ') }}</p>
+                    {% endif %}
+
+                    {% if arch.synergy_cards %}
+                    <h4 style="margin: 20px 0 10px;">Synergy Cards</h4>
+                    <p style="color: var(--accent-green);">{{ arch.synergy_cards | join(', ') }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ==========================================
+             CARD TIER LIST
+             ========================================== -->
+        <section id="card-tiers">
+            <h2>⭐ Card Ratings</h2>
+
+            <div class="search-box">
+                <input type="text" id="card-search" placeholder="Search cards...">
+            </div>
+
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Grade:</label>
+                    <div class="filter-buttons" id="grade-filters">
+                        <button data-grade="all" class="active">All</button>
+                        {% for grade in grade_order %}
+                        {% if cards_by_grade[grade] %}
+                        <button data-grade="{{ grade }}">{{ grade }}</button>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>Rarity:</label>
+                    <div class="filter-buttons" id="rarity-filters">
+                        <button data-rarity="all" class="active">All</button>
+                        <button data-rarity="mythic">Mythic</button>
+                        <button data-rarity="rare">Rare</button>
+                        <button data-rarity="uncommon">Uncommon</button>
+                        <button data-rarity="common">Common</button>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>Color:</label>
+                    <div class="filter-buttons" id="color-filters">
+                        <button data-color="all" class="active">All</button>
+                        <button data-color="W">☀️ W</button>
+                        <button data-color="U">💧 U</button>
+                        <button data-color="B">💀 B</button>
+                        <button data-color="R">🔥 R</button>
+                        <button data-color="G">🌲 G</button>
+                        <button data-color="multi">🌈 Multi</button>
+                        <button data-color="colorless">⬜ C</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid" id="all-cards-grid">
+                {% for card in all_cards %}
+                {% if card.image_uri %}
+                <div class="card-item"
+                     data-name="{{ card.name | lower }}"
+                     data-grade="{{ card.grade }}"
+                     data-colors="{{ card.colors }}"
+                     data-rarity="{{ card.rarity.value }}"
+                     data-wr="{{ card.stats.gih_wr }}"
+                     data-score="{{ card.composite_score }}"
+                     data-stability="{{ card.stability_score }}"
+                     data-irregularity="{{ card.irregularity_type }}"
+                     onclick="showCardModal(this)">
+                    <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                    <div class="card-info">
+                        <span class="name" title="{{ card.name }}">{{ card.name }}</span>
+                        <div class="stats">
+                            <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                            <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="no-results hidden" id="no-results">
+                No cards match your filters. Try adjusting your search.
+            </div>
+        </section>
+
+        <!-- ==========================================
+             SLEEPERS & TRAPS
+             ========================================== -->
+        <section id="special-cards">
+            <h2>💎 Sleepers & Traps</h2>
+            <div class="special-cards-grid">
+                <div class="special-section">
+                    <h3><span class="icon">💎</span> Sleeper Cards</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Cards performing better than their pick rate suggests
+                    </p>
+                    <div class="special-list">
+                        {% for card in sleepers %}
+                        {% if card.image_uri %}
+                        <div class="special-card sleeper"
+                             data-name="{{ card.name | lower }}"
+                             data-grade="{{ card.grade }}"
+                             data-colors="{{ card.colors }}"
+                             data-rarity="{{ card.rarity.value }}"
+                             data-wr="{{ card.stats.gih_wr }}"
+                             data-score="{{ card.composite_score }}"
+                             data-stability="{{ card.stability_score }}"
+                             style="cursor: pointer;"
+                             onclick="showCardModal(this)">
+                            <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                            <div class="info">
+                                <div class="name">{{ card.name }}</div>
+                                <div class="deviation positive">
+                                    +{{ "%.2f" | format(card.irregularity_z) }}σ |
+                                    {{ card.grade }} |
+                                    {{ card.stats.gih_wr | percent }} WR
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p style="color: var(--text-muted);">No significant sleepers detected.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="special-section">
+                    <h3><span class="icon">⚠️</span> Trap Cards</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Cards performing worse than their pick rate suggests
+                    </p>
+                    <div class="special-list">
+                        {% for card in traps %}
+                        {% if card.image_uri %}
+                        <div class="special-card trap"
+                             data-name="{{ card.name | lower }}"
+                             data-grade="{{ card.grade }}"
+                             data-colors="{{ card.colors }}"
+                             data-rarity="{{ card.rarity.value }}"
+                             data-wr="{{ card.stats.gih_wr }}"
+                             data-score="{{ card.composite_score }}"
+                             data-stability="{{ card.stability_score }}"
+                             style="cursor: pointer;"
+                             onclick="showCardModal(this)">
+                            <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                            <div class="info">
+                                <div class="name">{{ card.name }}</div>
+                                <div class="deviation negative">
+                                    {{ "%.2f" | format(card.irregularity_z) }}σ |
+                                    {{ card.grade }} |
+                                    {{ card.stats.gih_wr | percent }} WR
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p style="color: var(--text-muted);">No significant traps detected.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             LLM ANALYSIS (if available)
+             ========================================== -->
+        {% if llm_analysis %}
+        <section id="llm-analysis">
+            <h2>🤖 AI Strategic Analysis</h2>
+            <div style="white-space: pre-wrap; line-height: 1.8;">{{ llm_analysis }}</div>
+        </section>
+        {% endif %}
+
+        {% if llm_strategy %}
+        <section id="llm-strategy">
+            <h2>📝 Strategy Tips</h2>
+            <div style="white-space: pre-wrap; line-height: 1.8;">{{ llm_strategy }}</div>
+        </section>
+        {% endif %}
+    </div>
+
+    <!-- ==========================================
+         CARD MODAL
+         ========================================== -->
+    <div class="modal-overlay" id="card-modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-image">
+                <img id="modal-card-image" src="" alt="">
+            </div>
+            <div class="modal-details">
+                <h3 id="modal-card-name"></h3>
+                <div class="modal-stats">
+                    <div class="modal-stat">
+                        <div class="label">Grade</div>
+                        <div class="value" id="modal-card-grade"></div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="label">Score</div>
+                        <div class="value" id="modal-card-score"></div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="label">GIH Win Rate</div>
+                        <div class="value" id="modal-card-wr"></div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="label">Rarity</div>
+                        <div class="value" id="modal-card-rarity"></div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="label">Colors</div>
+                        <div class="value" id="modal-card-colors"></div>
+                    </div>
+                    <div class="modal-stat">
+                        <div class="label">Stability</div>
+                        <div class="value" id="modal-card-stability"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Generated by <strong>MTG Draft Analyzer</strong> | Data from 17lands.com</p>
+        <p>Total Games: {{ total_games | format_number }} | Cards: {{ total_cards }}</p>
+    </footer>
+
+    <!-- ==========================================
+         JAVASCRIPT
+         ========================================== -->
+    <script>
+        // ==========================================
+        // Filter State
+        // ==========================================
+        const state = {
+            grade: 'all',
+            rarity: 'all',
+            color: 'all',
+            search: ''
+        };
+
+        // ==========================================
+        // Filter Functions
+        // ==========================================
+        function filterCards() {
+            const cards = document.querySelectorAll('#all-cards-grid .card-item');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const matchGrade = state.grade === 'all' || card.dataset.grade === state.grade;
+                const matchRarity = state.rarity === 'all' || card.dataset.rarity === state.rarity;
+
+                let matchColor = state.color === 'all';
+                if (!matchColor) {
+                    const cardColors = card.dataset.colors || '';
+                    if (state.color === 'multi') {
+                        matchColor = cardColors.length > 1;
+                    } else if (state.color === 'colorless') {
+                        matchColor = cardColors.length === 0;
+                    } else {
+                        matchColor = cardColors.includes(state.color);
+                    }
+                }
+
+                const matchSearch = state.search === '' ||
+                    card.dataset.name.includes(state.search.toLowerCase());
+
+                const visible = matchGrade && matchRarity && matchColor && matchSearch;
+                card.classList.toggle('hidden', !visible);
+                if (visible) visibleCount++;
+            });
+
+            // Show/hide no results message
+            document.getElementById('no-results').classList.toggle('hidden', visibleCount > 0);
+        }
+
+        // ==========================================
+        // Filter Event Listeners
+        // ==========================================
+        function setupFilterButtons(containerId, stateKey) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update active state
+                    container.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    // Update filter state
+                    state[stateKey] = btn.dataset[stateKey];
+                    filterCards();
+                });
+            });
+        }
+
+        setupFilterButtons('grade-filters', 'grade');
+        setupFilterButtons('rarity-filters', 'rarity');
+        setupFilterButtons('color-filters', 'color');
+
+        // Search
+        document.getElementById('card-search').addEventListener('input', (e) => {
+            state.search = e.target.value;
+            filterCards();
+        });
+
+        // ==========================================
+        // Archetype Tabs
+        // ==========================================
+        document.querySelectorAll('.archetype-tabs button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const arch = btn.dataset.arch;
+
+                // Update tab active state
+                document.querySelectorAll('.archetype-tabs button').forEach(b => {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
+
+                // Show corresponding panel
+                document.querySelectorAll('.arch-panel').forEach(panel => {
+                    panel.classList.remove('active');
+                });
+                document.getElementById('arch-' + arch).classList.add('active');
+            });
+        });
+
+        // ==========================================
+        // Card Modal
+        // ==========================================
+        function showCardModal(cardEl) {
+            const modal = document.getElementById('card-modal');
+            const img = cardEl.querySelector('img');
+
+            document.getElementById('modal-card-image').src = img.src;
+            document.getElementById('modal-card-name').textContent = cardEl.querySelector('.name').textContent;
+            document.getElementById('modal-card-grade').innerHTML =
+                `<span class="grade grade-${cardEl.dataset.grade.toLowerCase().replace('+', 'plus').replace('-', 'minus')}">${cardEl.dataset.grade}</span>`;
+            document.getElementById('modal-card-score').textContent = parseFloat(cardEl.dataset.score).toFixed(1);
+            document.getElementById('modal-card-wr').textContent = (parseFloat(cardEl.dataset.wr) * 100).toFixed(1) + '%';
+            document.getElementById('modal-card-rarity').textContent = cardEl.dataset.rarity.charAt(0).toUpperCase() + cardEl.dataset.rarity.slice(1);
+            document.getElementById('modal-card-colors').textContent = cardEl.dataset.colors || 'Colorless';
+
+            const stability = cardEl.dataset.stability;
+            if (stability) {
+                document.getElementById('modal-card-stability').textContent = parseFloat(stability).toFixed(1) + '%';
+            } else {
+                document.getElementById('modal-card-stability').textContent = '-';
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('card-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // ==========================================
+        // Smooth scroll for navigation
+        // ==========================================
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

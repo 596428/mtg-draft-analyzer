@@ -1,0 +1,45 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables (API keys)
+.env
+.env.local
+.env.*.local
+
+# Analysis output (generated files)
+output/
+
+# Cache (17lands API cache)
+.cache/
+
+# Netlify local folder
+.netlify/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+claudedocs/

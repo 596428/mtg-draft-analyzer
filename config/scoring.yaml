@@ -1,0 +1,117 @@
+# MTG Draft Analyzer - Scoring Configuration
+# All weights and thresholds are configurable here
+
+scoring:
+  # Composite Score Weights (must sum to 1.0)
+  weights:
+    gih_wr: 0.45          # Games In Hand Win Rate - 핵심 성능 지표
+    iwd: 0.20             # Improvement When Drawn (GIH - GNS)
+    alsa_inverse: 0.15    # Average Last Seen At (희소성, 14 - ALSA)
+    oh_wr: 0.10           # Opening Hand Win Rate
+    gd_wr: 0.10           # Games Drawn Win Rate
+
+  # Wilson Score Interval Parameters (Bayesian)
+  bayesian:
+    confidence_z: 1.96    # 95% Confidence Interval
+    min_sample_size: 500  # Minimum games for reliable stats
+
+  # Composite Score Scaling
+  scaling:
+    center: 50            # Z-Score 0 maps to this
+    multiplier: 15        # Z-Score scaling factor
+    min: 0
+    max: 100
+
+# Calibration Settings (Percentile-based thresholds)
+calibration:
+  # Card Categories
+  synergy_percentile: 75      # Cards above this variance are synergy-dependent
+  sleeper_percentile: 90      # Top 10% deviation = sleeper
+  trap_percentile: 10         # Bottom 10% deviation = trap
+  bomb_percentile: 95         # Top 5% GIH WR = bomb
+  playable_percentile: 50     # Above median = playable
+
+  # Variance thresholds (fallback if percentile calc fails)
+  variance_fallback:
+    synergy: 0.002            # 4.5%p variance threshold
+    stable: 0.001             # Below this = very stable
+
+# Color Strength Calculation
+color_strength:
+  weights:
+    top_common_avg: 0.30      # Average of top 10 commons
+    top_uncommon_avg: 0.25    # Average of top 5 uncommons
+    bomb_factor: 0.20         # Rare/Mythic power level
+    archetype_success: 0.15   # Color pair win rates
+    depth_factor: 0.10        # Number of playable cards
+
+  # Top N cards to consider
+  top_n:
+    common: 10
+    uncommon: 5
+    rare: 3
+
+  # Stability weight range for synergy-dependent cards
+  stability_weight:
+    min: 0.80                 # Synergy-dependent cards weighted at 80%
+    max: 1.00                 # Stable cards weighted at 100%
+
+# Grade Assignment
+grades:
+  thresholds:
+    A_plus: 90
+    A: 80
+    B_plus: 70
+    B: 60
+    C_plus: 50
+    C: 40
+    D: 30
+    F: 0
+
+# LLM Configuration
+llm:
+  model: "gemini-2.0-flash"
+  max_tokens: 4096
+  temperature: 0.7
+
+  # Analysis prompts
+  prompts:
+    meta_analysis: |
+      Analyze the following MTG draft meta data and provide strategic insights:
+      1. Which colors/archetypes are strongest and why?
+      2. Key sleeper cards that are undervalued
+      3. Trap cards to avoid
+      4. Recommended draft strategies
+
+    card_analysis: |
+      Analyze this card's performance data in the current draft meta:
+      - Why might this card be over/under-performing?
+      - In which archetypes does it excel?
+      - Strategic considerations when drafting
+
+# Cache Settings
+cache:
+  ttl_hours: 24               # Cache expiry time
+  directory: ".cache"         # Cache directory name
+
+# API Settings
+api:
+  seventeen_lands:
+    base_url: "https://www.17lands.com"
+    card_ratings_endpoint: "/card_ratings/data"
+    color_ratings_endpoint: "/color_ratings/data"
+    timeout: 30
+
+  scryfall:
+    base_url: "https://api.scryfall.com"
+    rate_limit: 10            # Requests per second
+    timeout: 15
+
+# Output Settings
+output:
+  directory: "output"
+  formats:
+    - markdown
+    - json
+  include_timestamp: true
+  include_llm_analysis: true

@@ -112,7 +112,7 @@ class Calibrator:
             )
 
         # Collect GIH WR distribution
-        gih_wrs = [c.gih_wr for c in valid_cards if c.gih_wr > 0]
+        gih_wrs = [c.gih_wr for c in valid_cards if c.gih_wr is not None and c.gih_wr > 0]
 
         if not gih_wrs:
             logger.error("No valid GIH WR data for calibration")
@@ -135,6 +135,8 @@ class Calibrator:
         # The percentile of deviations gives us threshold values directly
         deviations = []
         for card in valid_cards:
+            if card.gih_wr is None:
+                continue
             expected_wr = 0.50 + (card.pick_rate * 0.12) - (card.alsa - 7) * 0.01
             deviation = card.gih_wr - expected_wr
             deviations.append(deviation)

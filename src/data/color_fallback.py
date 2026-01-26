@@ -39,7 +39,7 @@ def compute_color_pairs_from_cards(
     # Filter cards with valid deck_wr data
     valid_cards = [
         c for c in card_stats
-        if c.deck_wr > 0 and c.game_count >= min_games
+        if c.deck_wr is not None and c.deck_wr > 0 and c.game_count >= min_games
     ]
 
     if not valid_cards:

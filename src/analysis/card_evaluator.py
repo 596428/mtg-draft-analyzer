@@ -76,16 +76,16 @@ class CardEvaluator:
         """Get cards that overperform in a specific archetype."""
         return [
             c for c in self.snapshot.all_cards
-            if c.is_synergy_dependent
-            and archetype in c.stats.archetype_wrs
+            if archetype in c.stats.archetype_wrs
+            and c.stats.gih_wr is not None
             and c.stats.archetype_wrs[archetype] > c.stats.gih_wr + 0.02
         ]
 
-    def get_stable_cards(self, min_stability: float = 80.0) -> list[Card]:
-        """Get cards that perform consistently across archetypes."""
+    def get_flexible_cards(self, min_viable: int = 4) -> list[Card]:
+        """Get cards that perform well across many archetypes."""
         return [
             c for c in self.snapshot.all_cards
-            if c.stability_score >= min_stability
+            if c.viable_archetypes >= min_viable
         ]
 
     def suggest_pick(

@@ -49,10 +49,45 @@
             --grade-d: #db6d28;
             --grade-f: #f85149;
 
-            --card-width: 180px;
-            --card-width-sm: 146px;
+            /* Responsive card widths */
+            --card-width: 140px;           /* Mobile default */
+            --card-width-md: 160px;        /* Tablet */
+            --card-width-lg: 180px;        /* Desktop */
+            --card-width-sm: 146px;        /* Legacy fallback */
+
+            /* MTG card aspect ratio */
+            --card-aspect-ratio: 0.71;
+
+            /* Touch target minimum (WCAG AA) */
+            --touch-target-min: 44px;
+
+            /* Spacing system */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+
             --border-radius: 8px;
             --transition: 0.2s ease;
+        }
+
+        /* Mobile-first breakpoints */
+        @media (min-width: 480px) {
+            :root {
+                --card-width: 150px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            :root {
+                --card-width: var(--card-width-md);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            :root {
+                --card-width: var(--card-width-lg);
+            }
         }
 
         /* ============================================
@@ -87,55 +122,110 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: var(--space-md);
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                padding: 20px;
+            }
         }
 
         header {
             background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
             border-bottom: 1px solid var(--border-color);
-            padding: 30px 20px;
+            padding: var(--space-lg) var(--space-md);
             text-align: center;
         }
 
+        @media (min-width: 768px) {
+            header {
+                padding: 30px 20px;
+            }
+        }
+
         header h1 {
-            font-size: 2.5rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: var(--space-sm);
             background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
+        @media (min-width: 480px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (min-width: 768px) {
+            header h1 {
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+            }
+        }
+
         header .subtitle {
             color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        @media (min-width: 768px) {
+            header .subtitle {
+                font-size: 1rem;
+            }
         }
 
         section {
-            margin: 30px 0;
-            padding: 25px;
+            margin: var(--space-md) 0;
+            padding: var(--space-md);
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
         }
 
+        @media (min-width: 768px) {
+            section {
+                margin: 30px 0;
+                padding: 25px;
+            }
+        }
+
         section h2 {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: 600;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-sm);
             border-bottom: 2px solid var(--accent-blue);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: var(--space-sm);
+        }
+
+        @media (min-width: 768px) {
+            section h2 {
+                font-size: 1.5rem;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                gap: 10px;
+            }
         }
 
         section h3 {
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 500;
-            margin: 20px 0 15px;
+            margin: var(--space-md) 0 var(--space-sm);
             color: var(--text-secondary);
+        }
+
+        @media (min-width: 768px) {
+            section h3 {
+                font-size: 1.2rem;
+                margin: 20px 0 15px;
+            }
         }
 
         /* ============================================
@@ -143,38 +233,72 @@
            ============================================ */
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(2, 1fr);  /* Mobile: 2 columns */
+            gap: var(--space-sm);
+        }
+
+        @media (min-width: 480px) {
+            .stat-grid {
+                gap: var(--space-md);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .stat-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+            }
         }
 
         .stat-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            padding: 20px;
+            padding: var(--space-md);
             text-align: center;
             transition: var(--transition);
         }
 
-        .stat-card:hover {
-            border-color: var(--accent-blue);
-            transform: translateY(-2px);
+        @media (min-width: 768px) {
+            .stat-card {
+                padding: 20px;
+            }
+        }
+
+        @media (hover: hover) {
+            .stat-card:hover {
+                border-color: var(--accent-blue);
+                transform: translateY(-2px);
+            }
         }
 
         .stat-card .label {
             display: block;
-            font-size: 0.85rem;
+            font-size: 0.7rem;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: var(--space-xs);
+        }
+
+        @media (min-width: 768px) {
+            .stat-card .label {
+                font-size: 0.85rem;
+                margin-bottom: 8px;
+            }
         }
 
         .stat-card .value {
             display: block;
-            font-size: 1.8rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: var(--text-primary);
+        }
+
+        @media (min-width: 768px) {
+            .stat-card .value {
+                font-size: 1.8rem;
+            }
         }
 
         .stat-card .value.fast { color: var(--accent-red); }
@@ -182,18 +306,153 @@
         .stat-card .value.high { color: var(--accent-green); }
         .stat-card .value.low { color: var(--accent-orange); }
 
+        /* Tooltip styles for stat-card info icons */
+        .stat-card .label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            border-radius: 50%;
+            cursor: help;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .info-icon::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 400;
+            white-space: normal;
+            width: max-content;
+            max-width: 220px;
+            text-align: left;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            line-height: 1.4;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .info-icon:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        @media (max-width: 767px) {
+            .info-icon::after {
+                left: 0;
+                transform: none;
+                max-width: 180px;
+            }
+        }
+
+        /* ============================================
+           FORMAT ANALYSIS (LLM)
+           ============================================ */
+        .format-analysis {
+            margin-top: var(--space-lg);
+            padding: var(--space-lg);
+            background: var(--bg-card);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .format-analysis h3 {
+            font-size: 1.2rem;
+            margin-bottom: var(--space-md);
+            color: var(--accent-purple);
+            border-bottom: 2px solid var(--accent-purple);
+            padding-bottom: var(--space-sm);
+        }
+
+        .analysis-content {
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        .analysis-content h3,
+        .analysis-content h4 {
+            color: var(--accent-blue);
+            margin-top: var(--space-lg);
+            margin-bottom: var(--space-sm);
+            font-size: 1.1rem;
+        }
+
+        .analysis-content h3:first-child {
+            margin-top: 0;
+        }
+
+        .analysis-content p {
+            margin-bottom: var(--space-md);
+        }
+
+        .analysis-content ul,
+        .analysis-content ol {
+            margin-left: var(--space-lg);
+            margin-bottom: var(--space-md);
+        }
+
+        .analysis-content li {
+            margin-bottom: var(--space-xs);
+        }
+
+        .analysis-content strong {
+            color: var(--accent-yellow);
+        }
+
+        @media (min-width: 768px) {
+            .format-analysis {
+                padding: 25px;
+            }
+
+            .format-analysis h3 {
+                font-size: 1.4rem;
+            }
+        }
+
         /* ============================================
            COLOR RANKINGS
            ============================================ */
         .color-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
+            grid-template-columns: repeat(2, 1fr);  /* Mobile: 2 columns */
+            gap: var(--space-sm);
         }
 
-        @media (max-width: 768px) {
+        @media (min-width: 480px) {
             .color-grid {
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(3, 1fr);  /* Small mobile landscape: 3 columns */
+                gap: var(--space-md);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .color-grid {
+                grid-template-columns: repeat(5, 1fr);  /* Tablet+: 5 columns */
+                gap: 15px;
             }
         }
 
@@ -201,16 +460,33 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius);
-            padding: 20px;
+            padding: var(--space-md);
             text-align: center;
             cursor: pointer;
             transition: var(--transition);
             position: relative;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .color-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        @media (min-width: 768px) {
+            .color-card {
+                padding: 20px;
+            }
+        }
+
+        .color-card:active {
+            transform: scale(0.98);
+        }
+
+        @media (hover: hover) {
+            .color-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            }
+
+            .color-card:active {
+                transform: translateY(-1px);
+            }
         }
 
         .color-card[data-color="W"] { border-top: 4px solid var(--mtg-white); }
@@ -220,34 +496,69 @@
         .color-card[data-color="G"] { border-top: 4px solid var(--mtg-green); }
 
         .color-card .color-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        @media (min-width: 768px) {
+            .color-card .color-icon {
+                font-size: 2rem;
+                margin-bottom: 10px;
+            }
         }
 
         .color-card .color-name {
-            font-size: 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: var(--space-xs);
+        }
+
+        @media (min-width: 768px) {
+            .color-card .color-name {
+                font-size: 1rem;
+                margin-bottom: 5px;
+            }
         }
 
         .color-card .rank {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
         }
 
-        .color-card .score {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-top: 10px;
+        @media (min-width: 768px) {
+            .color-card .rank {
+                font-size: 0.9rem;
+            }
         }
 
+        .color-card .score {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: var(--space-sm);
+        }
+
+        @media (min-width: 768px) {
+            .color-card .score {
+                font-size: 1.5rem;
+                margin-top: 10px;
+            }
+        }
+
+        /* Hide top cards on mobile, show on tablet+ */
         .color-card .top-cards {
+            display: none;
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px solid var(--border-light);
             font-size: 0.85rem;
             color: var(--text-secondary);
             text-align: left;
+        }
+
+        @media (min-width: 768px) {
+            .color-card .top-cards {
+                display: block;
+            }
         }
 
         .color-card .top-cards li {
@@ -263,27 +574,66 @@
            ============================================ */
         .archetype-tabs {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
+            flex-wrap: nowrap;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-md);
             border-bottom: 1px solid var(--border-color);
+            /* Mobile: Horizontal scroll */
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;  /* Firefox */
+            -ms-overflow-style: none;  /* IE/Edge */
+        }
+
+        /* Hide scrollbar on Webkit browsers */
+        .archetype-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .archetype-tabs {
+                flex-wrap: wrap;
+                overflow-x: visible;
+                gap: 8px;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+            }
         }
 
         .archetype-tabs button {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 8px 16px;
+            padding: var(--space-sm) var(--space-md);
+            min-height: var(--touch-target-min);
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: var(--transition);
+            flex-shrink: 0;
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .archetype-tabs button:hover {
+        @media (min-width: 768px) {
+            .archetype-tabs button {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+                min-height: auto;
+            }
+        }
+
+        .archetype-tabs button:active {
             background: var(--bg-hover);
             color: var(--text-primary);
+        }
+
+        @media (hover: hover) {
+            .archetype-tabs button:hover {
+                background: var(--bg-hover);
+                color: var(--text-primary);
+            }
         }
 
         .archetype-tabs button.active {
@@ -345,25 +695,95 @@
         /* ============================================
            CARD GRID & CARDS
            ============================================ */
+
+        /* Filter Toggle Button (Mobile Only) */
+        .filter-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--space-sm);
+            cursor: pointer;
+            min-height: var(--touch-target-min);
+            font-weight: 500;
+            color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .filter-toggle::after {
+            content: '▼';
+            font-size: 0.8rem;
+            transition: transform var(--transition);
+        }
+
+        .filter-toggle.active::after {
+            transform: rotate(180deg);
+        }
+
+        /* Hide toggle on desktop */
+        @media (min-width: 768px) {
+            .filter-toggle {
+                display: none;
+            }
+        }
+
+        /* Filter Content Wrapper */
+        .filter-content {
+            display: none;
+            overflow: hidden;
+        }
+
+        .filter-content.active {
+            display: block;
+        }
+
+        /* Always show filter content on desktop */
+        @media (min-width: 768px) {
+            .filter-content {
+                display: block;
+            }
+        }
+
         .filter-bar {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+            flex-direction: column;
+            gap: var(--space-md);
             margin-bottom: 20px;
-            padding: 15px;
+            padding: var(--space-md);
             background: var(--bg-card);
             border-radius: var(--border-radius);
         }
 
+        @media (min-width: 768px) {
+            .filter-bar {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 15px;
+            }
+        }
+
         .filter-group {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        @media (min-width: 768px) {
+            .filter-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+            }
         }
 
         .filter-group label {
             font-size: 0.85rem;
             color: var(--text-secondary);
+            font-weight: 500;
         }
 
         .filter-buttons {
@@ -376,14 +796,29 @@
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            padding: 5px 12px;
+            padding: var(--space-sm) var(--space-md);
+            min-height: var(--touch-target-min);
             color: var(--text-secondary);
             font-size: 0.8rem;
             cursor: pointer;
             transition: var(--transition);
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .filter-buttons button:hover {
+        @media (min-width: 768px) {
+            .filter-buttons button {
+                padding: 5px 12px;
+                min-height: auto;
+            }
+        }
+
+        @media (hover: hover) {
+            .filter-buttons button:hover {
+                background: var(--bg-hover);
+            }
+        }
+
+        .filter-buttons button:active {
             background: var(--bg-hover);
         }
 
@@ -395,13 +830,21 @@
 
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(2, 1fr);  /* Mobile: 2 columns */
+            gap: var(--space-sm);
         }
 
-        @media (max-width: 600px) {
+        @media (min-width: 480px) {
             .card-grid {
-                grid-template-columns: repeat(auto-fill, minmax(var(--card-width-sm), 1fr));
+                grid-template-columns: repeat(3, 1fr);  /* Small mobile landscape: 3 columns */
+                gap: var(--space-md);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+                gap: 15px;
             }
         }
 
@@ -413,24 +856,78 @@
             cursor: pointer;
             transition: var(--transition);
             position: relative;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .card-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            z-index: 10;
+        /* Touch feedback for mobile */
+        .card-item:active {
+            transform: scale(0.98);
+            background: var(--bg-hover);
+        }
+
+        /* Hover effects only for devices with hover capability */
+        @media (hover: hover) {
+            .card-item:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+                z-index: 10;
+            }
+
+            .card-item:active {
+                transform: translateY(-3px);
+            }
         }
 
         .card-item img {
             width: 100%;
-            height: auto;
+            aspect-ratio: var(--card-aspect-ratio);
+            object-fit: cover;
             display: block;
             border-radius: var(--border-radius) var(--border-radius) 0 0;
+            background: var(--bg-tertiary);
         }
 
-        .card-item img[loading="lazy"] {
-            background: var(--bg-tertiary);
-            min-height: 250px;
+        /* Card Badges */
+        .card-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 1.2rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .card-badge.bomb {
+            color: #ff6b6b;
+            filter: drop-shadow(0 0 3px rgba(255, 107, 107, 0.8));
+        }
+
+        .card-badge.top-common {
+            color: #74b9ff;
+            filter: drop-shadow(0 0 3px rgba(116, 185, 255, 0.8));
+        }
+
+        .card-badge.top-uncommon {
+            color: #ffeaa7;
+            filter: drop-shadow(0 0 3px rgba(255, 234, 167, 0.8));
+        }
+
+        /* Multiple badges stacking */
+        .card-badges {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .card-badges .badge-icon {
+            font-size: 1.1rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
         }
 
         .card-info {
@@ -571,8 +1068,15 @@
             background: rgba(0, 0, 0, 0.8);
             z-index: 1000;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
+            align-items: flex-end;  /* Mobile: slide up from bottom */
+            padding: 0;
+        }
+
+        @media (min-width: 768px) {
+            .modal-overlay {
+                align-items: center;
+                padding: 20px;
+            }
         }
 
         .modal-overlay.active {
@@ -581,32 +1085,58 @@
 
         .modal-content {
             background: var(--bg-secondary);
-            border-radius: var(--border-radius);
-            max-width: 800px;
-            max-height: 90vh;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+            width: 100%;
+            max-height: 85vh;
             overflow: auto;
             position: relative;
             display: flex;
-            gap: 30px;
-            padding: 30px;
+            flex-direction: column;
+            gap: var(--space-md);
+            padding: var(--space-md);
+            padding-top: calc(var(--space-lg) + var(--touch-target-min));
+            animation: slideUp 0.3s ease;
+            -webkit-overflow-scrolling: touch;
         }
 
-        @media (max-width: 768px) {
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (min-width: 768px) {
             .modal-content {
-                flex-direction: column;
-                padding: 20px;
+                flex-direction: row;
+                border-radius: var(--border-radius);
+                max-width: 800px;
+                width: auto;
+                max-height: 90vh;
+                gap: 30px;
+                padding: 30px;
+                animation: fadeIn 0.3s ease;
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
             }
         }
 
         .modal-close {
             position: absolute;
-            top: 15px;
-            right: 15px;
+            top: var(--space-md);
+            right: var(--space-md);
             background: var(--bg-card);
             border: none;
             color: var(--text-primary);
-            width: 36px;
-            height: 36px;
+            width: var(--touch-target-min);
+            height: var(--touch-target-min);
             border-radius: 50%;
             cursor: pointer;
             font-size: 1.2rem;
@@ -614,47 +1144,106 @@
             align-items: center;
             justify-content: center;
             transition: var(--transition);
+            -webkit-tap-highlight-color: transparent;
+            z-index: 1;
         }
 
-        .modal-close:hover {
+        .modal-close:active {
             background: var(--bg-hover);
+        }
+
+        @media (hover: hover) {
+            .modal-close:hover {
+                background: var(--bg-hover);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .modal-close {
+                top: 15px;
+                right: 15px;
+                width: 36px;
+                height: 36px;
+            }
         }
 
         .modal-image {
             flex-shrink: 0;
+            display: flex;
+            justify-content: center;
         }
 
         .modal-image img {
-            width: 300px;
+            width: 200px;
             border-radius: var(--border-radius);
+            aspect-ratio: var(--card-aspect-ratio);
+            object-fit: cover;
+        }
+
+        @media (min-width: 768px) {
+            .modal-image img {
+                width: 300px;
+            }
         }
 
         .modal-details h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
+            font-size: 1.25rem;
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .modal-details h3 {
+                font-size: 1.5rem;
+                text-align: left;
+            }
         }
 
         .modal-stats {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            gap: var(--space-sm);
+        }
+
+        @media (min-width: 768px) {
+            .modal-stats {
+                gap: 15px;
+            }
         }
 
         .modal-stat {
             background: var(--bg-card);
-            padding: 12px;
+            padding: var(--space-sm);
             border-radius: var(--border-radius);
         }
 
+        @media (min-width: 768px) {
+            .modal-stat {
+                padding: 12px;
+            }
+        }
+
         .modal-stat .label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
             text-transform: uppercase;
         }
 
+        @media (min-width: 768px) {
+            .modal-stat .label {
+                font-size: 0.8rem;
+            }
+        }
+
         .modal-stat .value {
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 600;
+        }
+
+        @media (min-width: 768px) {
+            .modal-stat .value {
+                font-size: 1.2rem;
+            }
         }
 
         /* ============================================
@@ -764,6 +1353,351 @@
             padding: 40px;
             color: var(--text-muted);
         }
+
+        /* ============================================
+           RARITY GROUPS & SMALLER CARDS (ARCHETYPES)
+           ============================================ */
+        .rarity-group {
+            margin-bottom: 15px;
+        }
+
+        .rarity-label {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .rare-label {
+            background: #b8860b;
+            color: white;
+        }
+
+        .uncommon-label {
+            background: #c0c0c0;
+            color: black;
+        }
+
+        .common-label {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Smaller cards (66% of original) */
+        .card-row-small {
+            gap: 6px;
+        }
+
+        .card-item-small {
+            width: 100px !important;
+        }
+
+        .card-item-small img {
+            width: 100px;
+            height: auto;
+        }
+
+        .card-item-small .card-info {
+            padding: 5px;
+        }
+
+        .card-item-small .name {
+            font-size: 10px;
+        }
+
+        .card-item-small .stats {
+            margin-top: 3px;
+        }
+
+        .card-item-small .grade {
+            font-size: 9px;
+            padding: 1px 5px;
+        }
+
+        .card-item-small .win-rate {
+            font-size: 9px;
+        }
+
+        /* ============================================
+           SYNERGY CARDS (TEXT WITH HOVER)
+           ============================================ */
+        .synergy-cards-list {
+            color: var(--accent-green);
+            line-height: 1.8;
+        }
+
+        .synergy-card-text {
+            cursor: pointer;
+            position: relative;
+            text-decoration: underline dotted;
+            text-underline-offset: 2px;
+        }
+
+        .synergy-card-text:hover {
+            color: var(--accent-blue);
+        }
+
+        /* Hover tooltip with card image */
+        .synergy-card-text:hover::after {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 209px;
+            background-image: var(--card-image);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 1000;
+            pointer-events: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .synergy-card-text-nodata {
+            color: var(--text-muted);
+        }
+
+        /* Mobile: hide hover tooltip, rely on click */
+        @media (max-width: 767px) {
+            .synergy-card-text:hover::after {
+                display: none;
+            }
+        }
+
+        /* ============================================
+           COLOR METRICS (bomb/depth)
+           ============================================ */
+        .color-metrics {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .color-metrics .metric {
+            cursor: help;
+        }
+
+        /* ============================================
+           TRAP CARDS (TEXT WITH HOVER)
+           ============================================ */
+        .trap-cards-list {
+            color: var(--accent-red);
+            line-height: 1.8;
+        }
+
+        .trap-card-text {
+            cursor: pointer;
+            position: relative;
+            text-decoration: underline dotted;
+            text-underline-offset: 2px;
+        }
+
+        .trap-card-text:hover {
+            color: var(--accent-orange);
+        }
+
+        /* Hover tooltip with card image */
+        .trap-card-text:hover::after {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 209px;
+            background-image: var(--card-image);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 1000;
+            pointer-events: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .trap-card-text-nodata {
+            color: var(--text-muted);
+        }
+
+        /* Mobile: hide hover tooltip, rely on click */
+        @media (max-width: 767px) {
+            .trap-card-text:hover::after {
+                display: none;
+            }
+        }
+
+        /* ============================================
+           FORMAT SPEED ANALYSIS PANEL
+           ============================================ */
+        .speed-analysis-panel {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            border-radius: var(--border-radius);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .speed-analysis-panel h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--accent-blue);
+            font-size: 1.2rem;
+        }
+
+        .speed-analysis-panel h4 {
+            margin: 16px 0 8px;
+            font-size: 0.95em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .speed-data-section {
+            margin-bottom: 16px;
+        }
+
+        .speed-metrics {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        @media (min-width: 768px) {
+            .speed-metrics {
+                gap: 20px;
+            }
+        }
+
+        .speed-metric {
+            flex: 1;
+            min-width: 120px;
+            background: var(--bg-hover);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .speed-metric {
+                min-width: 140px;
+            }
+        }
+
+        .speed-metric .metric-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .speed-metric .metric-value {
+            display: block;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .speed-metric .metric-range {
+            display: block;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .speed-interpretation-section {
+            margin-bottom: 16px;
+        }
+
+        .interpretation-text {
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .supporting-metrics {
+            font-size: 0.8em;
+            color: var(--text-muted);
+        }
+
+        .speed-conclusion-section {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .speed-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .speed-badge.초고속,
+        .speed-badge.빠름 {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .speed-badge.보통 {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+
+        .speed-badge.약간\ 느림,
+        .speed-badge.느림,
+        .speed-badge.매우\ 느림 {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+
+        .speed-recommendation {
+            font-size: 0.95em;
+            color: var(--text-secondary);
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* Conflicts list */
+        .speed-conflicts {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: rgba(241, 196, 15, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-yellow);
+        }
+
+        .speed-conflicts .conflict-title {
+            font-size: 0.8em;
+            color: var(--accent-yellow);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .speed-conflicts ul {
+            margin: 0;
+            padding-left: 16px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .speed-conflicts li {
+            margin-bottom: 2px;
+        }
     </style>
 </head>
 <body>
@@ -781,6 +1715,69 @@
              ========================================== -->
         <section id="format-overview">
             <h2>📊 Format Overview</h2>
+
+            <!-- Format Speed Analysis Panel (17lands play_draw API) -->
+            {% if format_speed and format_speed.average_game_length %}
+            <div class="speed-analysis-panel">
+                <h3>⚡ 포맷 속도 분석</h3>
+
+                <!-- 1. 기초 데이터 (Basic Data) -->
+                <div class="speed-data-section">
+                    <h4>📈 기초 데이터</h4>
+                    <div class="speed-metrics">
+                        <div class="speed-metric">
+                            <span class="metric-label">평균 게임 길이</span>
+                            <span class="metric-value">{{ "%.2f" | format(format_speed.average_game_length) }}턴</span>
+                            <span class="metric-range">(전체 포맷 범위: 6.6~9.9턴)</span>
+                        </div>
+                        <div class="speed-metric">
+                            <span class="metric-label">선공 승률</span>
+                            <span class="metric-value">{{ "%.1f" | format(format_speed.win_rate_on_play * 100) }}%</span>
+                            <span class="metric-range">(전체 포맷 범위: 50~54%)</span>
+                        </div>
+                        {% if format_speed.play_draw_sample_size %}
+                        <div class="speed-metric">
+                            <span class="metric-label">분석 게임 수</span>
+                            <span class="metric-value">{{ format_speed.play_draw_sample_size | format_number }}</span>
+                            <span class="metric-range">&nbsp;</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 2. 해석 (Interpretation) -->
+                <div class="speed-interpretation-section">
+                    <h4>🔍 해석</h4>
+                    <p class="interpretation-text">{{ format_speed.speed_interpretation }}</p>
+                    <div class="supporting-metrics">
+                        참고: 템포 비율 {{ "%.3f" | format(format_speed.tempo_ratio) }},
+                        저/고마나 승률차 {{ "%+.1f" | format(format_speed.aggro_advantage * 100) }}%p
+                    </div>
+                </div>
+
+                <!-- 3. 결론 (Conclusion) -->
+                <div class="speed-conclusion-section">
+                    <h4>🎯 결론</h4>
+                    <span class="speed-badge {{ format_speed.speed_label }}">{{ format_speed.speed_label }}</span>
+                    {% if format_speed.recommendation %}
+                    <p class="speed-recommendation">{{ format_speed.recommendation }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Conflicts (if any) -->
+                {% if format_speed.conflicts %}
+                <div class="speed-conflicts">
+                    <div class="conflict-title">⚠️ 지표 간 상충</div>
+                    <ul>
+                        {% for conflict in format_speed.conflicts %}
+                        <li>{{ conflict }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <div class="stat-grid">
                 <div class="stat-card">
                     <span class="label">Total Cards</span>
@@ -788,29 +1785,63 @@
                 </div>
                 {% if format_speed %}
                 <div class="stat-card">
-                    <span class="label">Format Speed</span>
+                    <span class="label">
+                        Format Speed
+                        <span class="info-icon" data-tooltip="템포 비율 기반 포맷 속도. 빠름: 어그로 유리, 느림: 컨트롤 유리">ⓘ</span>
+                    </span>
                     <span class="value {% if '빠' in format_speed.speed_label or '고속' in format_speed.speed_label %}fast{% elif '느' in format_speed.speed_label %}slow{% endif %}">{{ format_speed.speed_label }}</span>
                 </div>
                 <div class="stat-card">
-                    <span class="label">Tempo Ratio (OH/GD)</span>
+                    <span class="label">
+                        Tempo Ratio (OH/GD)
+                        <span class="info-icon" data-tooltip="오프닝 핸드 WR / 드로우 WR. >1.0: 초반 유리, <1.0: 후반 유리">ⓘ</span>
+                    </span>
                     <span class="value">{{ "%.3f" | format(format_speed.tempo_ratio) }}</span>
                 </div>
                 {% endif %}
                 {% if splash_indicator %}
                 <div class="stat-card">
-                    <span class="label">Splash Viability</span>
+                    <span class="label">
+                        Splash Viability
+                        <span class="info-icon" data-tooltip="듀얼랜드 수와 픽 순위 기반. 높음: 3색 가능, 낮음: 2색 집중">ⓘ</span>
+                    </span>
                     <span class="value {% if '높' in splash_indicator.splash_label %}high{% elif '낮' in splash_indicator.splash_label %}low{% endif %}">{{ splash_indicator.splash_label }}</span>
                 </div>
                 <div class="stat-card">
-                    <span class="label">Dual Land ALSA</span>
+                    <span class="label">
+                        Dual Land ALSA
+                        <span class="info-icon" data-tooltip="듀얼랜드 평균 픽 순위. 낮을수록 수요 높음 (7.0 기준)">ⓘ</span>
+                    </span>
                     <span class="value">{{ "%.1f" | format(splash_indicator.dual_land_alsa) }}</span>
                 </div>
                 {% endif %}
             </div>
 
-            {% if format_speed and format_speed.recommendation %}
+            {% if llm_format_overview or llm_analysis %}
+            <div class="format-analysis">
+                <h3>🤖 AI Analysis</h3>
+                <div class="analysis-content">
+                    {% if llm_format_overview %}
+                    {{ llm_format_overview | markdown }}
+                    {% endif %}
+                    {% if llm_analysis %}
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+                    {{ llm_analysis | markdown }}
+                    {% endif %}
+                </div>
+            </div>
+            {% elif format_speed and format_speed.recommendation %}
             <div style="margin-top: 20px; padding: 15px; background: var(--bg-card); border-radius: var(--border-radius); border-left: 4px solid var(--accent-blue);">
                 <strong>💡 Strategy Tip:</strong> {{ format_speed.recommendation }}
+            </div>
+            {% endif %}
+
+            {% if llm_strategy %}
+            <div class="format-analysis" style="margin-top: 20px;">
+                <h3>📝 Strategy Tips</h3>
+                <div class="analysis-content">
+                    {{ llm_strategy | markdown }}
+                </div>
             </div>
             {% endif %}
         </section>
@@ -827,12 +1858,25 @@
                     <div class="color-name">{{ color_names.get(color.color, color.color) }}</div>
                     <div class="rank">#{{ color.rank }}</div>
                     <div class="score">{{ "%.1f" | format(color.strength_score) }}</div>
+
+                    <!-- Color Metrics (bomb/depth) -->
+                    <div class="color-metrics">
+                        <span class="metric" title="Bomb Factor: How strong are the top cards">💣 {{ "%.0f" | format(color.bomb_factor | default(0)) }}%</span>
+                        <span class="metric" title="Pool Depth: How many playables in this color">📊 {{ "%.0f" | format(color.depth_factor | default(0)) }}%</span>
+                    </div>
+
                     {% if color.top_commons %}
                     <ul class="top-cards">
                         <li><strong>Top Commons:</strong></li>
                         {% for card_name in color.top_commons[:3] %}
                         <li>• {{ card_name }}</li>
                         {% endfor %}
+                        {% if color.top_uncommons %}
+                        <li style="margin-top: 8px;"><strong>Top Uncommons:</strong></li>
+                        {% for card_name in color.top_uncommons[:3] %}
+                        <li>• {{ card_name }}</li>
+                        {% endfor %}
+                        {% endif %}
                     </ul>
                     {% endif %}
                 </div>
@@ -879,45 +1923,161 @@
                         </div>
                     </div>
 
-                    {% if arch.signpost_uncommon %}
-                    <p style="margin-bottom: 15px; color: var(--text-secondary);">
-                        <strong>Signpost:</strong> {{ arch.signpost_uncommon }}
-                    </p>
-                    {% endif %}
-
                     <h4 style="margin: 20px 0 10px;">Key Cards</h4>
-                    <div class="card-row">
-                        {% for card in item.top_cards[:6] %}
-                        {% if card.image_uri %}
-                        <div class="card-item"
-                             data-name="{{ card.name }}"
-                             data-grade="{{ card.grade }}"
-                             data-colors="{{ card.colors }}"
-                             data-rarity="{{ card.rarity.value }}"
-                             data-wr="{{ card.stats.gih_wr }}"
-                             data-score="{{ card.composite_score }}"
-                             onclick="showCardModal(this)">
-                            <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
-                            <div class="card-info">
-                                <span class="name">{{ card.name }}</span>
-                                <div class="stats">
-                                    <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
-                                    <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+
+                    <!-- Mythic & Rare -->
+                    {% set mythic_rare_cards = item.top_cards | selectattr('rarity.value', 'in', ['mythic', 'rare']) | list %}
+                    {% if mythic_rare_cards %}
+                    <div class="rarity-group">
+                        <span class="rarity-label rare-label">Mythic / Rare</span>
+                        <div class="card-row card-row-small">
+                            {% for card in mythic_rare_cards[:10] %}
+                            {% if card.image_uri %}
+                            <div class="card-item card-item-small"
+                                 data-name="{{ card.name | lower }}"
+                                 data-grade="{{ card.grade }}"
+                                 data-colors="{{ card.colors }}"
+                                 data-rarity="{{ card.rarity.value }}"
+                                 data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                                 data-score="{{ card.composite_score }}"
+                                 data-viable="{{ card.viable_archetypes }}"
+                                 data-best-arch="{{ card.best_archetype or '' }}"
+                                 data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                                 onclick="showCardModal(this)">
+                                <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                                {% if card.name in bomb_names %}<div class="card-badges"><span class="badge-icon" title="BOMB">💣</span></div>{% endif %}
+                                <div class="card-info">
+                                    <span class="name">{{ card.name }}</span>
+                                    <div class="stats">
+                                        <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                        <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                    </div>
                                 </div>
                             </div>
+                            {% endif %}
+                            {% endfor %}
                         </div>
-                        {% endif %}
-                        {% endfor %}
                     </div>
+                    {% endif %}
 
-                    {% if arch.key_commons %}
-                    <h4 style="margin: 20px 0 10px;">Key Commons</h4>
-                    <p style="color: var(--text-secondary);">{{ arch.key_commons | join(', ') }}</p>
+                    <!-- Uncommon -->
+                    {% set uncommon_cards = item.top_cards | selectattr('rarity.value', 'equalto', 'uncommon') | list %}
+                    {% if uncommon_cards %}
+                    <div class="rarity-group">
+                        <span class="rarity-label uncommon-label">Uncommon</span>
+                        <div class="card-row card-row-small">
+                            {% for card in uncommon_cards[:10] %}
+                            {% if card.image_uri %}
+                            <div class="card-item card-item-small"
+                                 data-name="{{ card.name | lower }}"
+                                 data-grade="{{ card.grade }}"
+                                 data-colors="{{ card.colors }}"
+                                 data-rarity="{{ card.rarity.value }}"
+                                 data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                                 data-score="{{ card.composite_score }}"
+                                 data-viable="{{ card.viable_archetypes }}"
+                                 data-best-arch="{{ card.best_archetype or '' }}"
+                                 data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                                 onclick="showCardModal(this)">
+                                <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                                {% if card.name in top_uncommon_names %}<div class="card-badges"><span class="badge-icon" title="Top Uncommon">⭐</span></div>{% endif %}
+                                <div class="card-info">
+                                    <span class="name">{{ card.name }}</span>
+                                    <div class="stats">
+                                        <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                        <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Common -->
+                    {% set common_cards = item.top_cards | selectattr('rarity.value', 'equalto', 'common') | list %}
+                    {% if common_cards %}
+                    <div class="rarity-group">
+                        <span class="rarity-label common-label">Common</span>
+                        <div class="card-row card-row-small">
+                            {% for card in common_cards[:10] %}
+                            {% if card.image_uri %}
+                            <div class="card-item card-item-small"
+                                 data-name="{{ card.name | lower }}"
+                                 data-grade="{{ card.grade }}"
+                                 data-colors="{{ card.colors }}"
+                                 data-rarity="{{ card.rarity.value }}"
+                                 data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                                 data-score="{{ card.composite_score }}"
+                                 data-viable="{{ card.viable_archetypes }}"
+                                 data-best-arch="{{ card.best_archetype or '' }}"
+                                 data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                                 onclick="showCardModal(this)">
+                                <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                                {% if card.name in top_common_names %}<div class="card-badges"><span class="badge-icon" title="Top Common">💎</span></div>{% endif %}
+                                <div class="card-info">
+                                    <span class="name">{{ card.name }}</span>
+                                    <div class="stats">
+                                        <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                        <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
                     {% endif %}
 
                     {% if arch.synergy_cards %}
                     <h4 style="margin: 20px 0 10px;">Synergy Cards</h4>
-                    <p style="color: var(--accent-green);">{{ arch.synergy_cards | join(', ') }}</p>
+                    <div class="synergy-cards-list">
+                        {% for card_name in arch.synergy_cards %}
+                        {% set card = all_cards | selectattr('name', 'equalto', card_name) | first %}
+                        {% if card %}
+                        <span class="synergy-card-text"
+                              data-name="{{ card.name | lower }}"
+                              data-grade="{{ card.grade }}"
+                              data-colors="{{ card.colors }}"
+                              data-rarity="{{ card.rarity.value }}"
+                              data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                              data-score="{{ card.composite_score }}"
+                              data-viable="{{ card.viable_archetypes }}"
+                              data-best-arch="{{ card.best_archetype or '' }}"
+                              data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                              data-image="{{ card.image_uri or '' }}"
+                              onclick="showCardModal(this)">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% else %}
+                        <span class="synergy-card-text-nodata">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if arch.trap_cards %}
+                    <h4 style="margin: 20px 0 10px; color: var(--accent-red);">⚠️ Trap Cards in {{ arch.guild_name }}</h4>
+                    <div class="trap-cards-list">
+                        {% for card_name in arch.trap_cards[:5] %}
+                        {% set card = all_cards | selectattr('name', 'equalto', card_name) | first %}
+                        {% if card %}
+                        <span class="trap-card-text"
+                              data-name="{{ card.name | lower }}"
+                              data-grade="{{ card.grade }}"
+                              data-colors="{{ card.colors }}"
+                              data-rarity="{{ card.rarity.value }}"
+                              data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                              data-score="{{ card.composite_score }}"
+                              data-viable="{{ card.viable_archetypes }}"
+                              data-best-arch="{{ card.best_archetype or '' }}"
+                              data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                              data-image="{{ card.image_uri or '' }}"
+                              onclick="showCardModal(this)">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% else %}
+                        <span class="trap-card-text-nodata">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -934,41 +2094,44 @@
                 <input type="text" id="card-search" placeholder="Search cards...">
             </div>
 
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label>Grade:</label>
-                    <div class="filter-buttons" id="grade-filters">
-                        <button data-grade="all" class="active">All</button>
-                        {% for grade in grade_order %}
-                        {% if cards_by_grade[grade] %}
-                        <button data-grade="{{ grade }}">{{ grade }}</button>
-                        {% endif %}
-                        {% endfor %}
+            <div class="filter-toggle">Filters</div>
+            <div class="filter-content">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label>Grade:</label>
+                        <div class="filter-buttons" id="grade-filters">
+                            <button data-grade="all" class="active">All</button>
+                            {% for grade in grade_order %}
+                            {% if cards_by_grade[grade] %}
+                            <button data-grade="{{ grade }}">{{ grade }}</button>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
                     </div>
-                </div>
 
-                <div class="filter-group">
-                    <label>Rarity:</label>
-                    <div class="filter-buttons" id="rarity-filters">
-                        <button data-rarity="all" class="active">All</button>
-                        <button data-rarity="mythic">Mythic</button>
-                        <button data-rarity="rare">Rare</button>
-                        <button data-rarity="uncommon">Uncommon</button>
-                        <button data-rarity="common">Common</button>
+                    <div class="filter-group">
+                        <label>Rarity:</label>
+                        <div class="filter-buttons" id="rarity-filters">
+                            <button data-rarity="all" class="active">All</button>
+                            <button data-rarity="mythic">Mythic</button>
+                            <button data-rarity="rare">Rare</button>
+                            <button data-rarity="uncommon">Uncommon</button>
+                            <button data-rarity="common">Common</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="filter-group">
-                    <label>Color:</label>
-                    <div class="filter-buttons" id="color-filters">
-                        <button data-color="all" class="active">All</button>
-                        <button data-color="W">☀️ W</button>
-                        <button data-color="U">💧 U</button>
-                        <button data-color="B">💀 B</button>
-                        <button data-color="R">🔥 R</button>
-                        <button data-color="G">🌲 G</button>
-                        <button data-color="multi">🌈 Multi</button>
-                        <button data-color="colorless">⬜ C</button>
+                    <div class="filter-group">
+                        <label>Color:</label>
+                        <div class="filter-buttons" id="color-filters">
+                            <button data-color="all" class="active">All</button>
+                            <button data-color="W">☀️ W</button>
+                            <button data-color="U">💧 U</button>
+                            <button data-color="B">💀 B</button>
+                            <button data-color="R">🔥 R</button>
+                            <button data-color="G">🌲 G</button>
+                            <button data-color="multi">🌈 Multi</button>
+                            <button data-color="colorless">⬜ C</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -981,12 +2144,21 @@
                      data-grade="{{ card.grade }}"
                      data-colors="{{ card.colors }}"
                      data-rarity="{{ card.rarity.value }}"
-                     data-wr="{{ card.stats.gih_wr }}"
+                     data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
                      data-score="{{ card.composite_score }}"
-                     data-stability="{{ card.stability_score }}"
+                     data-viable="{{ card.viable_archetypes }}"
+                     data-best-arch="{{ card.best_archetype or '' }}"
+                     data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
                      data-irregularity="{{ card.irregularity_type }}"
                      onclick="showCardModal(this)">
                     <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                    {% if card.name in bomb_names or card.name in top_common_names or card.name in top_uncommon_names %}
+                    <div class="card-badges">
+                        {% if card.name in bomb_names %}<span class="badge-icon" title="BOMB">💣</span>{% endif %}
+                        {% if card.name in top_common_names %}<span class="badge-icon" title="Top Common">💎</span>{% endif %}
+                        {% if card.name in top_uncommon_names %}<span class="badge-icon" title="Top Uncommon">⭐</span>{% endif %}
+                    </div>
+                    {% endif %}
                     <div class="card-info">
                         <span class="name" title="{{ card.name }}">{{ card.name }}</span>
                         <div class="stats">
@@ -1023,9 +2195,11 @@
                              data-grade="{{ card.grade }}"
                              data-colors="{{ card.colors }}"
                              data-rarity="{{ card.rarity.value }}"
-                             data-wr="{{ card.stats.gih_wr }}"
+                             data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
                              data-score="{{ card.composite_score }}"
-                             data-stability="{{ card.stability_score }}"
+                             data-viable="{{ card.viable_archetypes }}"
+                             data-best-arch="{{ card.best_archetype or '' }}"
+                             data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
                              style="cursor: pointer;"
                              onclick="showCardModal(this)">
                             <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
@@ -1058,9 +2232,11 @@
                              data-grade="{{ card.grade }}"
                              data-colors="{{ card.colors }}"
                              data-rarity="{{ card.rarity.value }}"
-                             data-wr="{{ card.stats.gih_wr }}"
+                             data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
                              data-score="{{ card.composite_score }}"
-                             data-stability="{{ card.stability_score }}"
+                             data-viable="{{ card.viable_archetypes }}"
+                             data-best-arch="{{ card.best_archetype or '' }}"
+                             data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
                              style="cursor: pointer;"
                              onclick="showCardModal(this)">
                             <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
@@ -1082,22 +2258,6 @@
             </div>
         </section>
 
-        <!-- ==========================================
-             LLM ANALYSIS (if available)
-             ========================================== -->
-        {% if llm_analysis %}
-        <section id="llm-analysis">
-            <h2>🤖 AI Strategic Analysis</h2>
-            <div style="white-space: pre-wrap; line-height: 1.8;">{{ llm_analysis }}</div>
-        </section>
-        {% endif %}
-
-        {% if llm_strategy %}
-        <section id="llm-strategy">
-            <h2>📝 Strategy Tips</h2>
-            <div style="white-space: pre-wrap; line-height: 1.8;">{{ llm_strategy }}</div>
-        </section>
-        {% endif %}
     </div>
 
     <!-- ==========================================
@@ -1133,8 +2293,8 @@
                         <div class="value" id="modal-card-colors"></div>
                     </div>
                     <div class="modal-stat">
-                        <div class="label">Stability</div>
-                        <div class="value" id="modal-card-stability"></div>
+                        <div class="label">Viability</div>
+                        <div class="value" id="modal-card-viability"></div>
                     </div>
                 </div>
             </div>
@@ -1251,10 +2411,22 @@
         // ==========================================
         function showCardModal(cardEl) {
             const modal = document.getElementById('card-modal');
-            const img = cardEl.querySelector('img');
 
-            document.getElementById('modal-card-image').src = img.src;
-            document.getElementById('modal-card-name').textContent = cardEl.querySelector('.name').textContent;
+            // Handle synergy-card-text (span elements) differently
+            const isSynergyText = cardEl.classList.contains('synergy-card-text');
+            let imgSrc, cardName;
+
+            if (isSynergyText) {
+                imgSrc = cardEl.dataset.image || '';
+                cardName = cardEl.textContent;
+            } else {
+                const img = cardEl.querySelector('img');
+                imgSrc = img ? img.src : '';
+                cardName = cardEl.querySelector('.name')?.textContent || '';
+            }
+
+            document.getElementById('modal-card-image').src = imgSrc;
+            document.getElementById('modal-card-name').textContent = cardName;
             document.getElementById('modal-card-grade').innerHTML =
                 `<span class="grade grade-${cardEl.dataset.grade.toLowerCase().replace('+', 'plus').replace('-', 'minus')}">${cardEl.dataset.grade}</span>`;
             document.getElementById('modal-card-score').textContent = parseFloat(cardEl.dataset.score).toFixed(1);
@@ -1262,12 +2434,39 @@
             document.getElementById('modal-card-rarity').textContent = cardEl.dataset.rarity.charAt(0).toUpperCase() + cardEl.dataset.rarity.slice(1);
             document.getElementById('modal-card-colors').textContent = cardEl.dataset.colors || 'Colorless';
 
-            const stability = cardEl.dataset.stability;
-            if (stability) {
-                document.getElementById('modal-card-stability').textContent = parseFloat(stability).toFixed(1) + '%';
-            } else {
-                document.getElementById('modal-card-stability').textContent = '-';
+            // Parse archetype win rates and display detailed viability
+            const viable = parseInt(cardEl.dataset.viable) || 0;
+            const bestArch = cardEl.dataset.bestArch;
+            const archWrsRaw = cardEl.dataset.archWrs;
+
+            let archWrs = {};
+            try {
+                archWrs = archWrsRaw ? JSON.parse(archWrsRaw) : {};
+            } catch (e) {
+                archWrs = {};
             }
+
+            const archCount = Object.keys(archWrs).length;
+            let viabilityText = '';
+
+            if (archCount === 0) {
+                // No archetype data available
+                viabilityText = 'No data';
+            } else if (archCount === 1) {
+                // Single archetype (typically gold cards)
+                const arch = Object.keys(archWrs)[0];
+                const wr = (archWrs[arch] * 100).toFixed(1);
+                viabilityText = arch + ' only (' + wr + '%)';
+            } else {
+                // Multiple archetypes - show all with win rates, sorted by WR
+                const sorted = Object.entries(archWrs)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([arch, wr]) => arch + ': ' + (wr * 100).toFixed(1) + '%')
+                    .join(', ');
+                viabilityText = sorted;
+            }
+
+            document.getElementById('modal-card-viability').textContent = viabilityText;
 
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -1285,6 +2484,21 @@
         });
 
         // ==========================================
+        // Collapsible Filter Toggle (Mobile)
+        // ==========================================
+        function setupCollapsibleFilters() {
+            const filterToggle = document.querySelector('.filter-toggle');
+            const filterContent = document.querySelector('.filter-content');
+            if (!filterToggle || !filterContent) return;
+
+            filterToggle.addEventListener('click', () => {
+                filterToggle.classList.toggle('active');
+                filterContent.classList.toggle('active');
+            });
+        }
+        setupCollapsibleFilters();
+
+        // ==========================================
         // Smooth scroll for navigation
         // ==========================================
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1294,6 +2508,24 @@
                     behavior: 'smooth'
                 });
             });
+        });
+
+        // ==========================================
+        // Synergy card hover image setup
+        // ==========================================
+        document.querySelectorAll('.synergy-card-text').forEach(el => {
+            const imageUrl = el.dataset.image;
+            if (imageUrl) {
+                el.style.setProperty('--card-image', `url(${imageUrl})`);
+            }
+        });
+
+        // Trap cards hover image
+        document.querySelectorAll('.trap-card-text').forEach(el => {
+            const imageUrl = el.dataset.image;
+            if (imageUrl) {
+                el.style.setProperty('--card-image', `url(${imageUrl})`);
+            }
         });
     </script>
 </body>

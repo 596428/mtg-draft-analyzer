@@ -40,6 +40,7 @@ class SeventeenLandsLoader:
     BASE_URL = "https://www.17lands.com"
     CARD_RATINGS_ENDPOINT = "/card_ratings/data"
     COLOR_RATINGS_ENDPOINT = "/color_ratings/data"
+    PLAY_DRAW_ENDPOINT = "/data/play_draw"
 
     def __init__(
         self,
@@ -217,7 +218,9 @@ class SeventeenLandsLoader:
         Returns:
             List of raw card data dicts for the archetype
         """
-        cache_key = ("card_ratings_archetype", expansion, format, colors)
+        # Use normalized colors for cache key consistency
+        normalized_colors = normalize_color_pair(colors)
+        cache_key = ("card_ratings_archetype", expansion, format, normalized_colors)
 
         if use_cache:
             cached = self.cache.get(*cache_key)
@@ -258,7 +261,7 @@ class SeventeenLandsLoader:
             Dict mapping color pair to list of card data
         """
         if color_pairs is None:
-            color_pairs = ["WU", "UB", "BR", "RG", "GW", "WB", "UR", "BG", "RW", "GU"]
+            color_pairs = ["WU", "UB", "BR", "RG", "WG", "WB", "UR", "BG", "WR", "UG"]
 
         results = {}
         for colors in color_pairs:
@@ -274,3 +277,63 @@ class SeventeenLandsLoader:
             return 0
         # Use max game count as estimate (most-played card)
         return max(c.game_count for c in cards)
+
+    def fetch_play_draw_stats(
+        self,
+        expansion: str,
+        format: str = "PremierDraft",
+        use_cache: bool = True,
+    ) -> Optional[dict]:
+        """
+        Fetch play/draw statistics from 17lands.
+
+        This API returns direct format speed indicators:
+        - average_game_length: Average game duration in turns
+        - win_rate_on_play: Win rate when going first
+
+        Args:
+            expansion: Set code (e.g., "FDN", "DSK", "BLB")
+            format: Draft format (PremierDraft, QuickDraft, TradDraft)
+            use_cache: Whether to use cached data
+
+        Returns:
+            Dict with play/draw stats or None if unavailable
+        """
+        cache_key = ("play_draw", expansion, format)
+
+        if use_cache:
+            cached = self.cache.get(*cache_key)
+            if cached:
+                logger.info(f"Using cached play_draw stats for {expansion} {format}")
+                return cached
+
+        try:
+            logger.info(f"Fetching play_draw stats for {expansion} {format}")
+            # API returns all formats - need to filter
+            raw_data = self._make_request(self.PLAY_DRAW_ENDPOINT, {})
+
+            # Handle response format - could be list or dict with 'data' key
+            if isinstance(raw_data, dict):
+                result = raw_data.get("data", [])
+            else:
+                result = raw_data
+
+            for entry in result:
+                if (
+                    entry.get("expansion") == expansion
+                    and entry.get("event_type") == format
+                ):
+                    if use_cache:
+                        self.cache.set(entry, *cache_key)
+                    logger.info(
+                        f"Found play_draw stats: avg_length={entry.get('average_game_length'):.2f}, "
+                        f"wr_on_play={entry.get('win_rate_on_play'):.3f}"
+                    )
+                    return entry
+
+            logger.warning(f"No play_draw data found for {expansion} {format}")
+            return None
+
+        except Exception as e:
+            logger.warning(f"play_draw API unavailable: {e}")
+            return None

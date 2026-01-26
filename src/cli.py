@@ -231,12 +231,15 @@ def card(
 
     info_table.add_row("Grade", f"[bold]{card.grade}[/bold]")
     info_table.add_row("Composite Score", f"{card.composite_score:.1f}")
-    info_table.add_row("GIH Win Rate", f"{card.stats.gih_wr*100:.2f}%")
+    gih_wr_str = f"{card.stats.gih_wr*100:.2f}%" if card.stats.gih_wr is not None else "N/A"
+    info_table.add_row("GIH Win Rate", gih_wr_str)
     info_table.add_row("Adjusted WR", f"{card.adjusted_gih_wr*100:.2f}%")
     info_table.add_row("Games Analyzed", f"{card.stats.gih_games:,}")
     info_table.add_row("ALSA", f"{card.stats.alsa:.1f}")
-    info_table.add_row("IWD", f"{card.stats.iwd*100:.2f}%")
-    info_table.add_row("Stability", f"{card.stability_score:.1f}%")
+    iwd_str = f"{card.stats.iwd*100:.2f}%" if card.stats.iwd is not None else "N/A"
+    info_table.add_row("IWD", iwd_str)
+    viability_str = f"{card.viable_archetypes} archetypes" if card.viable_archetypes > 0 else "N/A"
+    info_table.add_row("Viability", viability_str)
     info_table.add_row("Classification", card.irregularity_type.title())
 
     console.print(info_table)

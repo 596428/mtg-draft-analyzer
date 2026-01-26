@@ -22,12 +22,6 @@ META_ANALYSIS_PROMPT = '''You are an expert MTG draft analyst. Analyze the follo
 ### Top Performing Cards
 {top_cards}
 
-### Sleeper Cards (Undervalued)
-{sleeper_cards}
-
-### Trap Cards (Overvalued)
-{trap_cards}
-
 ---
 
 Please provide analysis on:
@@ -37,15 +31,6 @@ Please provide analysis on:
 2. **Color Assessment**: Which colors are strongest and why? Are there any colors to avoid?
 
 3. **Top Archetypes**: What makes the best archetypes successful? Key strategies for each.
-
-4. **Draft Strategy**:
-   - What should I prioritize in pack 1?
-   - How should I read signals?
-   - When should I pivot?
-
-5. **Sleeper Insights**: Why might these sleeper cards be undervalued? In what situations do they shine?
-
-6. **Trap Analysis**: Why are these trap cards underperforming? What makes them look better than they are?
 
 Please be specific and actionable. Reference actual card names and win rates where helpful.
 
@@ -74,7 +59,7 @@ CARD_ANALYSIS_PROMPT = '''Analyze this MTG card's draft performance:
 
 ## Classification
 - **Irregularity**: {irregularity_type} (Z-score: {z_score:.2f})
-- **Stability**: {stability:.1f}% ({stability_class})
+- **Viability**: {viable_archetypes} archetypes ({viability_class})
 
 ---
 
@@ -90,12 +75,74 @@ Please analyze:
 '''
 
 
+FORMAT_OVERVIEW_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
+다음 데이터를 분석하여 **데이터 너머의 인사이트**를 제공해주세요.
+
+## 핵심 질문 (반드시 답변)
+1. **왜** 상위 아키타입이 강한가? (단순히 "강하다"가 아니라 메커니즘 설명)
+2. 각 아키타입은 **서로 다른 전략**을 사용하는가? (공통점과 차이점)
+3. Pack 1 Pick 1에서 **구체적인** 우선순위는?
+
+⚠️ **중요**: 1위 아키타입의 메커니즘이 포맷 전체를 대표하지 않습니다.
+각 아키타입은 **독립적인 전략**을 가집니다. 분석 시 반드시 구분하세요.
+
+## 포맷 데이터
+- 세트: {expansion} ({format})
+- 게임 수: {total_games:,}판
+
+## 포맷 속도
+- Tempo Ratio: {tempo_ratio:.3f} (OH WR / GD WR)
+- Speed: {speed_label}
+- Aggro Advantage: {aggro_advantage:.3f}
+- Low CMC WR (≤2): {low_cmc_wr:.2%} vs High CMC WR (≥5): {high_cmc_wr:.2%}
+- 갈등 감지: {conflicts}
+
+## 스플래시 분석
+- Splash Viability: {splash_label}
+- Dual Land Count: {dual_land_count}장
+- Dual Land ALSA: {dual_land_alsa:.1f}
+- Fixer WR Premium: {fixer_wr_premium:.2%}
+
+## 색상 분석 (상세)
+{color_details}
+
+## 아키타입 분석 (상세)
+{archetype_details}
+
+---
+
+## 출력 형식 (3개 섹션)
+
+### 1. 📋 포맷 특성 (왜 이런 메타인가)
+- 이 포맷에서 **공존하는** 주요 전략들은? (예: 어그로, 미드레인지, 컨트롤)
+- **주의**: 1위 아키타입의 전략이 포맷 전체를 정의하지 않습니다
+- 각 색상 조합별로 **서로 다른** 메커니즘이 존재합니다
+- 다른 세트와 차별화되는 특징은?
+- 속도 갈등이 있다면 실전적 해석
+
+### 2. 🏆 상위 아키타입 심층 분석
+⚠️ 각 아키타입은 **독립적인 전략**을 가집니다. 1위의 전략 ≠ 포맷 전체 전략
+
+각 아키타입(상위 3개)마다:
+- 이 아키타입**만의** 고유 메커니즘 (다른 아키타입과 구별되는 점)
+- 핵심 시너지 카드 3장과 **왜 이 아키타입에서만 작동하는지**
+- 이 아키타입에서 피해야 할 카드 (다른 아키타입에서는 좋을 수 있음)
+
+### 3. 🎨 색상 전략
+- 강한 색상 2개와 **구체적 이유** (폭탄 강도, 깊이, 커먼 품질)
+- 약한 색상과 피해야 할 상황
+- P1P1 색상 우선순위
+
+---
+
+한글로 작성하세요 (카드명/색상 약어/아키타입명은 영문 유지).
+'''
+
+
 STRATEGY_TIPS_PROMPT = '''Based on this meta data for {expansion} {format}, provide 5-7 concise, actionable draft tips:
 
 **Top Colors**: {top_colors}
 **Top Archetypes**: {top_archetypes}
-**Key Sleepers**: {key_sleepers}
-**Key Traps**: {key_traps}
 
 Format your response as a numbered list of strategic tips. Each tip should be:
 - Specific to this format
@@ -114,6 +161,7 @@ class PromptBuilder:
         meta_template: Optional[str] = None,
         card_template: Optional[str] = None,
         strategy_template: Optional[str] = None,
+        format_overview_template: Optional[str] = None,
     ):
         """
         Initialize prompt builder.
@@ -122,10 +170,12 @@ class PromptBuilder:
             meta_template: Custom meta analysis template
             card_template: Custom card analysis template
             strategy_template: Custom strategy tips template
+            format_overview_template: Custom format overview template
         """
         self.meta_template = meta_template or META_ANALYSIS_PROMPT
         self.card_template = card_template or CARD_ANALYSIS_PROMPT
         self.strategy_template = strategy_template or STRATEGY_TIPS_PROMPT
+        self.format_overview_template = format_overview_template or FORMAT_OVERVIEW_PROMPT
 
     def build_meta_prompt(self, snapshot: MetaSnapshot) -> str:
         """Build meta analysis prompt from snapshot."""
@@ -150,22 +200,6 @@ class PromptBuilder:
             for c in snapshot.top_cards[:15]
         )
 
-        # Format sleepers
-        sleeper_cards = "\n".join(
-            f"- **{c.name}** ({c.colors}) - "
-            f"Grade: {c.grade}, GIH WR: {c.stats.gih_wr:.2%}, "
-            f"Z: +{c.irregularity_z:.2f}"
-            for c in snapshot.sleeper_cards[:7]
-        ) or "No significant sleepers detected."
-
-        # Format traps
-        trap_cards = "\n".join(
-            f"- **{c.name}** ({c.colors}) - "
-            f"Grade: {c.grade}, GIH WR: {c.stats.gih_wr:.2%}, "
-            f"Z: {c.irregularity_z:.2f}"
-            for c in snapshot.trap_cards[:7]
-        ) or "No significant traps detected."
-
         return self.meta_template.format(
             expansion=snapshot.expansion,
             format=snapshot.format,
@@ -174,8 +208,6 @@ class PromptBuilder:
             color_rankings=color_rankings,
             archetype_rankings=archetype_rankings,
             top_cards=top_cards,
-            sleeper_cards=sleeper_cards,
-            trap_cards=trap_cards,
         )
 
     def build_card_prompt(self, card: Card) -> str:
@@ -195,18 +227,24 @@ class PromptBuilder:
         else:
             archetype_breakdown = "No archetype-specific data available."
 
-        # Determine stability class
-        if card.stability_score >= 80:
-            stability_class = "Very Stable"
-        elif card.stability_score >= 60:
-            stability_class = "Stable"
-        elif card.stability_score >= 40:
-            stability_class = "Moderate"
+        # Determine viability class
+        if card.viable_archetypes == 0:
+            viability_class = "No data"
+        elif card.viable_archetypes >= 5:
+            viability_class = "Very Flexible"
+        elif card.viable_archetypes >= 3:
+            viability_class = "Flexible"
+        elif card.viable_archetypes >= 2:
+            viability_class = "Moderate"
         else:
-            stability_class = "Synergy-Dependent"
+            viability_class = "Archetype-Specific"
 
         # Calculate pick position from ALSA
         pick_position = int(card.stats.alsa + 0.5)
+
+        # Handle None values for win rates
+        gih_wr = card.stats.gih_wr if card.stats.gih_wr is not None else 0.0
+        iwd = card.stats.iwd if card.stats.iwd is not None else 0.0
 
         return self.card_template.format(
             name=card.name,
@@ -216,17 +254,17 @@ class PromptBuilder:
             oracle_text=card.oracle_text or "N/A",
             score=card.composite_score,
             grade=card.grade,
-            gih_wr=card.stats.gih_wr,
+            gih_wr=gih_wr,
             adj_wr=card.adjusted_gih_wr,
             games=card.stats.gih_games,
             alsa=card.stats.alsa,
             pick_position=pick_position,
-            iwd=card.stats.iwd,
+            iwd=iwd,
             archetype_breakdown=archetype_breakdown,
             irregularity_type=card.irregularity_type.title(),
             z_score=card.irregularity_z,
-            stability=card.stability_score,
-            stability_class=stability_class,
+            viable_archetypes=card.viable_archetypes,
+            viability_class=viability_class,
         )
 
     def build_strategy_prompt(self, snapshot: MetaSnapshot) -> str:
@@ -235,21 +273,153 @@ class PromptBuilder:
         top_archetypes = ", ".join(
             f"{a.guild_name}" for a in snapshot.top_archetypes[:5]
         )
-        key_sleepers = ", ".join(
-            c.name for c in snapshot.sleeper_cards[:5]
-        ) or "None"
-        key_traps = ", ".join(
-            c.name for c in snapshot.trap_cards[:5]
-        ) or "None"
 
         return self.strategy_template.format(
             expansion=snapshot.expansion,
             format=snapshot.format,
             top_colors=top_colors,
             top_archetypes=top_archetypes,
-            key_sleepers=key_sleepers,
-            key_traps=key_traps,
         )
+
+    def build_format_overview_prompt(self, snapshot: MetaSnapshot) -> str:
+        """Build comprehensive format overview prompt with detailed insight data."""
+        # Format speed data (with defaults for missing data)
+        fs = snapshot.format_speed
+        tempo_ratio = fs.tempo_ratio if fs else 1.0
+        speed_label = fs.speed_label if fs else "보통"
+        aggro_advantage = fs.aggro_advantage if fs else 0.0
+        low_cmc_wr = fs.low_cmc_wr if fs else 0.5
+        high_cmc_wr = fs.high_cmc_wr if fs else 0.5
+        conflicts = ", ".join(fs.conflicts) if fs and fs.conflicts else "없음"
+
+        # Splash indicator data (with defaults)
+        si = snapshot.splash_indicator
+        splash_label = si.splash_label if si else "보통"
+        dual_land_count = si.dual_land_count if si else 0
+        dual_land_alsa = si.dual_land_alsa if si else 7.0
+        fixer_wr_premium = si.fixer_wr_premium if si else 0.0
+
+        # Format detailed color data
+        color_details = self._format_color_details(snapshot.top_colors)
+
+        # Format detailed archetype data
+        archetype_details = self._format_archetype_details(snapshot.top_archetypes[:5])
+
+        return self.format_overview_template.format(
+            expansion=snapshot.expansion,
+            format=snapshot.format,
+            total_games=snapshot.total_games_analyzed,
+            tempo_ratio=tempo_ratio,
+            speed_label=speed_label,
+            aggro_advantage=aggro_advantage,
+            low_cmc_wr=low_cmc_wr,
+            high_cmc_wr=high_cmc_wr,
+            conflicts=conflicts,
+            splash_label=splash_label,
+            dual_land_count=dual_land_count,
+            dual_land_alsa=dual_land_alsa,
+            fixer_wr_premium=fixer_wr_premium,
+            color_details=color_details,
+            archetype_details=archetype_details,
+        )
+
+    def _format_color_details(self, colors: list) -> str:
+        """Format detailed color analysis with bomb_factor, depth, and top cards."""
+        lines = []
+        for cs in colors:
+            top_commons = ", ".join(cs.top_commons[:3]) if cs.top_commons else "N/A"
+            top_uncommons = ", ".join(cs.top_uncommons[:3]) if cs.top_uncommons else "N/A"
+            lines.append(f"""### {cs.color} (Rank #{cs.rank})
+- 강도 점수: {cs.strength_score:.1f}
+- 플레이어블: {cs.playable_count}장
+- 폭탄 강도: {cs.bomb_factor:.2f}
+- 카드 풀 깊이: {cs.depth_factor:.2f}
+- 상위 커먼: {top_commons}
+- 상위 언커먼: {top_uncommons}""")
+        return "\n\n".join(lines) if lines else "색상 데이터 없음"
+
+    def _format_archetype_details(self, archetypes: list) -> str:
+        """Format detailed archetype analysis with synergy and key cards."""
+        lines = []
+        for a in archetypes:
+            key_commons = ", ".join(a.key_commons[:3]) if a.key_commons else "N/A"
+            bombs = ", ".join(a.bombs[:3]) if a.bombs else "N/A"
+            trap_cards = ", ".join(a.trap_cards[:3]) if a.trap_cards else "N/A"
+            synergy_cards = ", ".join(a.synergy_cards[:3]) if a.synergy_cards else "N/A"
+            signpost = a.signpost_uncommon or "N/A"
+            lines.append(f"""### {a.guild_name} ({a.colors}) - Rank #{a.rank}
+**⚠️ 이 아키타입 고유 전략** (다른 아키타입과 다름)
+- 승률: {a.win_rate:.2%}
+- 메타 점유율: {a.meta_share:.1%}
+- 시너지 리프트: {a.synergy_lift:.2%} (표준편차: {a.synergy_std:.3f})
+- Signpost: {signpost}
+- 핵심 커먼: {key_commons}
+- 시너지 카드 (이 아키타입 전용): {synergy_cards}
+- 폭탄: {bombs}
+- 이 아키타입 트랩: {trap_cards}""")
+        return "\n\n".join(lines) if lines else "아키타입 데이터 없음"
+
+    def _format_sleeper_details(self, cards: list) -> str:
+        """Format detailed sleeper card data with oracle text for LLM analysis."""
+        if not cards:
+            return "슬리퍼 카드 없음"
+
+        lines = []
+        for c in cards:
+            # Get win rate safely
+            gih_wr = c.stats.gih_wr if c.stats.gih_wr is not None else 0.0
+            pick_rate = c.stats.pick_rate * 100  # Convert to percentage
+            ata = c.stats.ata
+
+            # Get best archetype win rate
+            best_arch = c.best_archetype or "N/A"
+            best_arch_wr = c.stats.archetype_wrs.get(best_arch, 0.0) if best_arch != "N/A" else 0.0
+
+            # Oracle text (truncate if too long, but preserve full for analysis)
+            oracle = c.oracle_text or "텍스트 없음"
+            type_line = c.type_line or "타입 정보 없음"
+
+            lines.append(f"""### {c.name} ({c.colors}, {c.rarity.value})
+- 타입: {type_line}
+- 효과: {oracle}
+- GIH WR: {gih_wr:.2%}
+- Pick Rate: {pick_rate:.1f}%
+- ATA (Average Taken At): {ata:.1f}
+- Z-score: +{c.irregularity_z:.2f} (저평가 정도)
+- Best Archetype: {best_arch} ({best_arch_wr:.2%})
+- Off-Archetype Penalty: {c.off_archetype_penalty:.2%}""")
+        return "\n\n".join(lines)
+
+    def _format_trap_details(self, cards: list) -> str:
+        """Format detailed trap card data with oracle text for LLM analysis."""
+        if not cards:
+            return "트랩 카드 없음"
+
+        lines = []
+        for c in cards:
+            # Get win rate safely
+            gih_wr = c.stats.gih_wr if c.stats.gih_wr is not None else 0.0
+            pick_rate = c.stats.pick_rate * 100  # Convert to percentage
+            ata = c.stats.ata
+
+            # Get best archetype win rate
+            best_arch = c.best_archetype or "N/A"
+            best_arch_wr = c.stats.archetype_wrs.get(best_arch, 0.0) if best_arch != "N/A" else 0.0
+
+            # Oracle text
+            oracle = c.oracle_text or "텍스트 없음"
+            type_line = c.type_line or "타입 정보 없음"
+
+            lines.append(f"""### {c.name} ({c.colors}, {c.rarity.value})
+- 타입: {type_line}
+- 효과: {oracle}
+- GIH WR: {gih_wr:.2%}
+- Pick Rate: {pick_rate:.1f}% (높으면 과대평가)
+- ATA (Average Taken At): {ata:.1f} (낮으면 일찍 픽됨 = 과대평가)
+- Z-score: {c.irregularity_z:.2f} (과대평가 정도)
+- Best Archetype: {best_arch} ({best_arch_wr:.2%})
+- Off-Archetype Penalty: {c.off_archetype_penalty:.2%}""")
+        return "\n\n".join(lines)
 
 
 def build_meta_prompt(snapshot: MetaSnapshot) -> str:
@@ -262,3 +432,9 @@ def build_card_prompt(card: Card) -> str:
     """Convenience function to build card prompt."""
     builder = PromptBuilder()
     return builder.build_card_prompt(card)
+
+
+def build_format_overview_prompt(snapshot: MetaSnapshot) -> str:
+    """Convenience function to build format overview prompt."""
+    builder = PromptBuilder()
+    return builder.build_format_overview_prompt(snapshot)

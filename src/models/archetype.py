@@ -32,32 +32,32 @@ class Color(Enum):
         return mapping.get(value.lower())
 
 
-# Standard two-color pairs in MTG
+# Standard two-color pairs in MTG (WUBRG order for API compatibility)
 COLOR_PAIRS = [
     "WU",  # Azorius
     "UB",  # Dimir
     "BR",  # Rakdos
     "RG",  # Gruul
-    "GW",  # Selesnya
+    "WG",  # Selesnya (normalized from GW)
     "WB",  # Orzhov
     "UR",  # Izzet
     "BG",  # Golgari
-    "RW",  # Boros
-    "GU",  # Simic
+    "WR",  # Boros (normalized from RW)
+    "UG",  # Simic (normalized from GU)
 ]
 
-# Guild names for two-color pairs
+# Guild names for two-color pairs (WUBRG order for API compatibility)
 GUILD_NAMES = {
     "WU": "Azorius",
     "UB": "Dimir",
     "BR": "Rakdos",
     "RG": "Gruul",
-    "GW": "Selesnya",
+    "WG": "Selesnya",  # normalized from GW
     "WB": "Orzhov",
     "UR": "Izzet",
     "BG": "Golgari",
-    "RW": "Boros",
-    "GU": "Simic",
+    "WR": "Boros",     # normalized from RW
+    "UG": "Simic",     # normalized from GU
 }
 
 

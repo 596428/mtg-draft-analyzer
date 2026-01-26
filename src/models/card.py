@@ -44,21 +44,26 @@ class CardStats:
     game_count: int = 0
 
     # Deck-level win rate (when card is in pool)
-    deck_wr: float = 0.0  # win_rate from 17lands API
+    # None = no data (e.g., Special Guest cards with hidden stats)
+    deck_wr: Optional[float] = None  # win_rate from 17lands API
 
     # Draft metrics
     alsa: float = 7.0  # Average Last Seen At (lower = picked earlier)
     ata: float = 7.0  # Average Taken At
 
     # Performance metrics (raw win rates)
-    gih_wr: float = 0.0  # Games In Hand Win Rate
+    # None = no data available (not the same as 0% win rate)
+    gih_wr: Optional[float] = None  # Games In Hand Win Rate
     gih_games: int = 0
     gih_wins: int = 0
-    gns_wr: float = 0.0  # Games Not Seen Win Rate
-    oh_wr: float = 0.0  # Opening Hand Win Rate
+    gns_wr: Optional[float] = None  # Games Not Seen Win Rate
+    oh_wr: Optional[float] = None  # Opening Hand Win Rate
     oh_games: int = 0
-    gd_wr: float = 0.0  # Games Drawn Win Rate
+    gd_wr: Optional[float] = None  # Games Drawn Win Rate
     gd_games: int = 0
+
+    # Flag indicating whether win rate data is available
+    has_valid_wr: bool = False
 
     # Archetype-specific data (color pair -> win rate)
     archetype_wrs: dict[str, float] = field(default_factory=dict)
@@ -72,13 +77,19 @@ class CardStats:
         return self.pick_count / self.seen_count
 
     @property
-    def iwd(self) -> float:
+    def iwd(self) -> Optional[float]:
         """Improvement When Drawn (GIH WR - GNS WR)."""
+        if self.gih_wr is None or self.gns_wr is None:
+            return None
         return self.gih_wr - self.gns_wr
 
     @classmethod
     def from_17lands(cls, data: dict) -> "CardStats":
-        """Create CardStats from 17lands API response."""
+        """Create CardStats from 17lands API response.
+
+        Preserves None values for win rates to distinguish between
+        "no data" (None) and "0% win rate" (0.0).
+        """
         # Parse colors - 17lands uses 'color' field
         colors = data.get("color", "") or ""
 
@@ -86,13 +97,23 @@ class CardStats:
         rarity_str = data.get("rarity", "common")
         rarity = Rarity.from_string(rarity_str)
 
-        # Calculate wins from games and win rate
-        gih_games = data.get("ever_drawn_game_count", 0) or 0
-        gih_wr = data.get("ever_drawn_win_rate", 0.0) or 0.0
-        gih_wins = int(gih_games * gih_wr)
+        # Get win rate data - preserve None for missing data
+        gih_wr_raw = data.get("ever_drawn_win_rate")
+        gns_wr_raw = data.get("never_drawn_win_rate")
+        oh_wr_raw = data.get("opening_hand_win_rate")
+        gd_wr_raw = data.get("drawn_win_rate")
+        deck_wr_raw = data.get("win_rate")
 
+        # Determine if this card has valid win rate data
+        has_valid_wr = gih_wr_raw is not None
+
+        # Calculate games (0 if None)
+        gih_games = data.get("ever_drawn_game_count", 0) or 0
         oh_games = data.get("opening_hand_game_count", 0) or 0
         gd_games = data.get("drawn_game_count", 0) or 0
+
+        # Calculate wins only if we have valid data
+        gih_wins = int(gih_games * gih_wr_raw) if gih_wr_raw is not None else 0
 
         return cls(
             name=data.get("name", "Unknown"),
@@ -101,17 +122,18 @@ class CardStats:
             seen_count=data.get("seen_count", 0) or 0,
             pick_count=data.get("pick_count", 0) or 0,
             game_count=data.get("game_count", 0) or 0,
-            deck_wr=data.get("win_rate", 0.0) or 0.0,
+            deck_wr=deck_wr_raw,
             alsa=data.get("avg_seen", 7.0) or 7.0,
             ata=data.get("avg_pick", 7.0) or 7.0,
-            gih_wr=gih_wr,
+            gih_wr=gih_wr_raw,
             gih_games=gih_games,
             gih_wins=gih_wins,
-            gns_wr=data.get("never_drawn_win_rate", 0.0) or 0.0,
-            oh_wr=data.get("opening_hand_win_rate", 0.0) or 0.0,
+            gns_wr=gns_wr_raw,
+            oh_wr=oh_wr_raw,
             oh_games=oh_games,
-            gd_wr=data.get("drawn_win_rate", 0.0) or 0.0,
+            gd_wr=gd_wr_raw,
             gd_games=gd_games,
+            has_valid_wr=has_valid_wr,
         )
 
 
@@ -129,13 +151,14 @@ class Card:
     # Bayesian-adjusted metrics
     adjusted_gih_wr: float = 0.0
 
-    # Archetype variance analysis
-    archetype_variance: float = 0.0
-    stability_score: float = 100.0
-    is_synergy_dependent: bool = False
+    # Viability analysis (replaces stability)
+    viable_archetypes: int = 0  # Number of archetypes where card performs well
+    best_archetype: Optional[str] = None  # Best performing archetype
+    off_archetype_penalty: float = 0.0  # WR drop in non-viable archetypes
+    natural_premium: Optional[float] = None  # Performance in natural colors vs others
 
     # Irregularity detection
-    irregularity_type: str = "normal"  # "sleeper", "trap", or "normal"
+    irregularity_type: str = "normal"  # "sleeper", "trap", "no_data", or "normal"
     irregularity_z: float = 0.0
 
     # Scryfall data (optional, for LLM context)
@@ -166,21 +189,33 @@ class Card:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON export."""
+        # Handle None values for win rates
+        gih_wr = round(self.stats.gih_wr, 4) if self.stats.gih_wr is not None else None
+        iwd = round(self.stats.iwd, 4) if self.stats.iwd is not None else None
+
         return {
             "name": self.name,
             "colors": self.colors,
             "rarity": self.rarity.value,
             "composite_score": round(self.composite_score, 2),
             "grade": self.grade,
-            "gih_wr": round(self.stats.gih_wr, 4),
+            "gih_wr": gih_wr,
             "adjusted_gih_wr": round(self.adjusted_gih_wr, 4),
             "gih_games": self.stats.gih_games,
             "alsa": round(self.stats.alsa, 2),
-            "iwd": round(self.stats.iwd, 4),
-            "stability_score": round(self.stability_score, 2),
-            "is_synergy_dependent": self.is_synergy_dependent,
+            "iwd": iwd,
+            "has_valid_data": self.stats.has_valid_wr,
+            # Viability metrics (replaces stability)
+            "viable_archetypes": self.viable_archetypes,
+            "best_archetype": self.best_archetype,
+            "off_archetype_penalty": round(self.off_archetype_penalty, 4) if self.off_archetype_penalty else 0.0,
+            "natural_premium": round(self.natural_premium, 4) if self.natural_premium is not None else None,
+            "archetype_wrs": {k: round(v, 4) for k, v in self.stats.archetype_wrs.items()},
+            "archetype_games": self.stats.archetype_games,
+            # Irregularity
             "irregularity_type": self.irregularity_type,
             "irregularity_z": round(self.irregularity_z, 2),
+            # Scryfall data
             "oracle_text": self.oracle_text,
             "mana_cost": self.mana_cost,
             "type_line": self.type_line,

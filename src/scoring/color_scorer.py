@@ -42,8 +42,8 @@ class ColorScorer:
         self,
         weights: Optional[dict[str, float]] = None,
         top_n: Optional[dict[str, int]] = None,
-        stability_weight_min: float = 0.80,
-        stability_weight_max: float = 1.00,
+        viability_weight_min: float = 0.85,
+        viability_weight_max: float = 1.00,
         playable_threshold: float = 50.0,
     ):
         """
@@ -52,14 +52,14 @@ class ColorScorer:
         Args:
             weights: Component weights for strength calculation
             top_n: Number of top cards to consider per rarity
-            stability_weight_min: Weight for synergy-dependent cards
-            stability_weight_max: Weight for stable cards
+            viability_weight_min: Weight for cards viable in few archetypes
+            viability_weight_max: Weight for cards viable in many archetypes
             playable_threshold: Minimum score to count as playable
         """
         self.weights = weights or self.DEFAULT_WEIGHTS
         self.top_n = top_n or self.DEFAULT_TOP_N
-        self.stability_weight_min = stability_weight_min
-        self.stability_weight_max = stability_weight_max
+        self.viability_weight_min = viability_weight_min
+        self.viability_weight_max = viability_weight_max
         self.playable_threshold = playable_threshold
 
     @classmethod
@@ -72,24 +72,29 @@ class ColorScorer:
         return cls(
             weights=cs_config.get("weights"),
             top_n=cs_config.get("top_n"),
-            stability_weight_min=cs_config.get("stability_weight", {}).get("min", 0.80),
-            stability_weight_max=cs_config.get("stability_weight", {}).get("max", 1.00),
+            viability_weight_min=cs_config.get("viability_weight", {}).get("min", 0.85),
+            viability_weight_max=cs_config.get("viability_weight", {}).get("max", 1.00),
         )
 
     def _get_color_cards(self, color: str, cards: list[Card]) -> list[Card]:
         """Get all cards containing a specific color."""
         return [c for c in cards if color in c.colors]
 
-    def _get_stability_weight(self, card: Card) -> float:
+    def _get_viability_weight(self, card: Card) -> float:
         """
-        Calculate stability weight for a card.
+        Calculate viability weight for a card.
 
-        Stable cards get weight of 1.0, synergy-dependent cards get reduced weight.
+        Cards viable in more archetypes get higher weight.
         """
-        # Linear interpolation based on stability score
-        normalized = card.stability_score / 100.0
-        return self.stability_weight_min + normalized * (
-            self.stability_weight_max - self.stability_weight_min
+        # Cards with no viability data get neutral weight
+        if card.viable_archetypes == 0:
+            return (self.viability_weight_min + self.viability_weight_max) / 2
+
+        # Normalize viable archetypes: 1-2 = low, 3-5 = medium, 6+ = high
+        # Max archetypes is 10 (all two-color pairs)
+        normalized = min(card.viable_archetypes / 6.0, 1.0)
+        return self.viability_weight_min + normalized * (
+            self.viability_weight_max - self.viability_weight_min
         )
 
     def _calculate_top_avg(
@@ -99,7 +104,11 @@ class ColorScorer:
         top_n: int,
     ) -> tuple[float, list[str]]:
         """Calculate average score of top N cards of a rarity."""
-        rarity_cards = [c for c in cards if c.rarity == rarity]
+        # Filter out cards with no valid win rate data
+        rarity_cards = [
+            c for c in cards
+            if c.rarity == rarity and c.stats.has_valid_wr
+        ]
         rarity_cards.sort(key=lambda c: c.composite_score, reverse=True)
 
         top_cards = rarity_cards[:top_n]
@@ -107,9 +116,9 @@ class ColorScorer:
         if not top_cards:
             return 0.0, []
 
-        # Apply stability weighting
+        # Apply viability weighting
         weighted_scores = [
-            c.composite_score * self._get_stability_weight(c)
+            c.composite_score * self._get_viability_weight(c)
             for c in top_cards
         ]
 
@@ -172,6 +181,7 @@ class ColorScorer:
         mono_cards = [
             c for c in cards
             if c.colors == color
+            and c.stats.deck_wr is not None  # Filter out null data
             and c.stats.deck_wr > 0
             and c.stats.game_count >= 200
         ]

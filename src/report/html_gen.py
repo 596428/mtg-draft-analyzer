@@ -1,17 +1,64 @@
 """HTML draft guide report generation."""
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader
+from markupsafe import Markup
 
 from src.models.archetype import Archetype, ColorStrength, GUILD_NAMES
 from src.models.card import Card, Rarity
 from src.models.meta import MetaSnapshot
 
 logger = logging.getLogger(__name__)
+
+
+def simple_markdown_to_html(text: str) -> str:
+    """Convert simple markdown to HTML for LLM analysis display."""
+    if not text:
+        return ""
+
+    # Escape HTML entities first
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    # Convert headers (### -> h4, ## -> h3)
+    text = re.sub(r"^### (.+)$", r"<h4>\1</h4>", text, flags=re.MULTILINE)
+    text = re.sub(r"^## (.+)$", r"<h3>\1</h3>", text, flags=re.MULTILINE)
+
+    # Convert bold (**text**)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+
+    # Convert bullet points (- item)
+    lines = text.split("\n")
+    result = []
+    in_list = False
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            if not in_list:
+                result.append("<ul>")
+                in_list = True
+            result.append(f"<li>{stripped[2:]}</li>")
+        else:
+            if in_list:
+                result.append("</ul>")
+                in_list = False
+            # Convert paragraphs (empty lines become paragraph breaks)
+            if stripped == "":
+                result.append("<br>")
+            elif not stripped.startswith("<h"):
+                result.append(f"<p>{stripped}</p>" if stripped else "")
+            else:
+                result.append(stripped)
+
+    if in_list:
+        result.append("</ul>")
+
+    return "\n".join(result)
 
 
 # Color display mapping
@@ -59,11 +106,12 @@ class HtmlReportGenerator:
         else:
             self.env = Environment(autoescape=True)
 
-        # Add custom filters
-        self.env.filters["format_number"] = lambda n: f"{n:,}"
-        self.env.filters["percent"] = lambda n: f"{n * 100:.1f}%"
-        self.env.filters["percent2"] = lambda n: f"{n * 100:.2f}%"
+        # Add custom filters (handle None values gracefully)
+        self.env.filters["format_number"] = lambda n: f"{n:,}" if n is not None else "N/A"
+        self.env.filters["percent"] = lambda n: f"{n * 100:.1f}%" if n is not None else "N/A"
+        self.env.filters["percent2"] = lambda n: f"{n * 100:.2f}%" if n is not None else "N/A"
         self.env.filters["grade_class"] = self._grade_to_class
+        self.env.filters["markdown"] = lambda text: Markup(simple_markdown_to_html(text)) if text else ""
 
     @staticmethod
     def _grade_to_class(grade: str) -> str:
@@ -193,8 +241,31 @@ class HtmlReportGenerator:
             arch_cards = self._get_archetype_cards(snapshot, arch)
             archetypes_data.append({
                 "archetype": arch,
-                "top_cards": arch_cards[:8],
+                # Pass all cards, template filters by rarity (10 per group)
+                "top_cards": arch_cards,
             })
+
+        # Build sets for card badges
+        top_common_names = set()
+        top_uncommon_names = set()
+        bomb_names = set()
+
+        # Collect top commons/uncommons from color analysis
+        for color in snapshot.top_colors:
+            if color.top_commons:
+                top_common_names.update(color.top_commons[:3])
+            if color.top_uncommons:
+                top_uncommon_names.update(color.top_uncommons[:3])
+
+        # Collect bombs from archetypes and high-grade cards
+        for arch in snapshot.top_archetypes:
+            if arch.bombs:
+                bomb_names.update(arch.bombs[:5])
+
+        # Also add S and A+ grade cards as bombs
+        for card in all_cards_sorted:
+            if card.grade in ("S", "A+"):
+                bomb_names.add(card.name)
 
         context = {
             # Meta info
@@ -212,6 +283,11 @@ class HtmlReportGenerator:
             "color_strengths": snapshot.top_colors,
             "color_names": COLOR_NAMES,
             "color_icons": COLOR_ICONS,
+
+            # Card badge sets
+            "top_common_names": top_common_names,
+            "top_uncommon_names": top_uncommon_names,
+            "bomb_names": bomb_names,
 
             # Archetype analysis
             "archetypes": snapshot.top_archetypes,
@@ -235,6 +311,7 @@ class HtmlReportGenerator:
             # LLM analysis (optional)
             "llm_analysis": snapshot.llm_meta_analysis if include_llm else None,
             "llm_strategy": snapshot.llm_strategy_tips if include_llm else None,
+            "llm_format_overview": snapshot.llm_format_overview if include_llm else None,
         }
 
         return template.render(**context)
@@ -244,26 +321,23 @@ class HtmlReportGenerator:
         snapshot: MetaSnapshot,
         archetype: Archetype,
     ) -> list[Card]:
-        """Get top performing cards for a specific archetype."""
-        color1 = archetype.colors[0] if len(archetype.colors) > 0 else ""
-        color2 = archetype.colors[1] if len(archetype.colors) > 1 else ""
+        """Get top performing cards for a specific archetype.
 
-        # Find cards that are in this color pair
+        Only includes cards that have viability data for this archetype
+        (i.e., archetype_wrs contains this archetype's colors).
+        Cards are sorted by composite_score (descending).
+        """
+        # Find cards that have viability data for this specific archetype
         matching_cards = []
         for card in snapshot.all_cards:
-            card_colors = set(card.colors)
-            arch_colors = {color1, color2}
+            # Only include cards that have data for this archetype
+            if archetype.colors in card.stats.archetype_wrs:
+                matching_cards.append(card)
 
-            # Card should be playable in this archetype
-            if card_colors.issubset(arch_colors) or not card_colors:
-                # Get archetype-specific win rate if available
-                arch_wr = card.stats.archetype_wrs.get(archetype.colors, card.stats.gih_wr)
-                matching_cards.append((card, arch_wr))
+        # Sort by composite_score (descending)
+        matching_cards.sort(key=lambda c: c.composite_score, reverse=True)
 
-        # Sort by archetype win rate
-        matching_cards.sort(key=lambda x: x[1], reverse=True)
-
-        return [c[0] for c in matching_cards]
+        return matching_cards
 
     def save_report(
         self,

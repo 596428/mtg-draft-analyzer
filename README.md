@@ -1,6 +1,6 @@
 # MTG Draft Meta Analyzer
 
-> **[📊 ECL Draft Guide (Live)](https://mtg-ecl-draft-guide.netlify.app/ecl_premierdraft_2026-01-24_draft_guide)** | **[📖 Metrics Guide](./METRICS_GUIDE.md)**
+> **[📊 ECL Draft Guide (Live)](https://mtg-ecl-draft-guide.netlify.app/ecl_premierdraft_2026-01-26_draft_guide)** | **[📖 Metrics Guide](./METRICS_GUIDE.md)**
 
 17lands 데이터를 활용한 MTG Arena 드래프트 메타 분석 시스템
 
@@ -13,6 +13,7 @@
 - **Card Scoring**: Wilson Score + Z-Score 기반 카드 종합 점수 산출
 - **Color Analysis**: 색깔별 강도 및 아키타입 분석
 - **Archetype Ranking**: 10개 2색 조합(길드)별 승률 및 시너지 분석
+- **Format Speed Analysis**: 17lands play_draw API 기반 포맷 속도 분석 (평균 게임 길이, 선공 승률)
 - **Sleeper/Trap Detection**: 저평가/고평가 카드 자동 탐지
 - **Interactive HTML Guide**: 필터링, 검색, 모달 기능이 포함된 웹 가이드 생성
 - **LLM Integration**: Gemini API를 통한 전략 해석
@@ -164,7 +165,7 @@ mtg-draft-analyzer/
 
 ## API Data Sources
 
-- **17lands**: Card ratings, color ratings, archetype data
+- **17lands**: Card ratings, color ratings, archetype data, play/draw statistics
 - **Scryfall**: Card images and metadata
 - **Gemini**: Strategic analysis and interpretation (optional)
 

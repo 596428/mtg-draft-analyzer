@@ -132,12 +132,125 @@ def is_dual_land(card: Card) -> bool:
     return False
 
 
-def calculate_format_speed(cards: list[Card]) -> FormatSpeed:
+def _classify_speed_from_api(avg_length: float, wr_on_play: float) -> tuple[str, int]:
+    """Classify speed from direct API metrics.
+
+    Args:
+        avg_length: Average game length in turns
+        wr_on_play: Win rate when going first (0.0-1.0)
+
+    Returns:
+        Tuple of (speed_label, score)
+    """
+    score = 0
+
+    # Game length scoring (historical range: ~6.6-9.9 turns)
+    # Lower = faster format
+    if avg_length < 8.2:
+        score += 2
+    elif avg_length < 8.5:
+        score += 1
+    elif avg_length > 9.2:
+        score -= 2
+    elif avg_length > 9.0:
+        score -= 1
+
+    # Win rate on play scoring (historical range: ~50-54%)
+    # Higher = faster format (going first matters more)
+    if wr_on_play > 0.530:
+        score += 2
+    elif wr_on_play > 0.525:
+        score += 1
+    elif wr_on_play < 0.510:
+        score -= 2
+    elif wr_on_play < 0.515:
+        score -= 1
+
+    # Convert score to label
+    if score >= 3:
+        label = "초고속"
+    elif score >= 1:
+        label = "빠름"
+    elif score <= -3:
+        label = "매우 느림"
+    elif score <= -1:
+        label = "느림"
+    else:
+        label = "보통"
+
+    return label, score
+
+
+def _generate_speed_interpretation(
+    avg_length: Optional[float],
+    wr_on_play: Optional[float],
+    tempo_ratio: float,
+    aggro_advantage: float,
+) -> str:
+    """Generate human-readable interpretation of format speed.
+
+    Explains: 기초 데이터 수준 → 해석 → 결론
+    """
+    parts = []
+
+    if avg_length is not None and wr_on_play is not None:
+        # Part 1: 기초 데이터 수준 (Level of basic data)
+        if avg_length < 8.5:
+            parts.append(f"평균 게임 길이 {avg_length:.2f}턴은 빠른 편입니다")
+        elif avg_length > 9.0:
+            parts.append(f"평균 게임 길이 {avg_length:.2f}턴은 느린 편입니다")
+        else:
+            parts.append(f"평균 게임 길이 {avg_length:.2f}턴은 평균 수준입니다")
+
+        if wr_on_play > 0.525:
+            parts.append(f"선공 승률 {wr_on_play:.1%}로 선공 우위가 높습니다")
+        elif wr_on_play < 0.515:
+            parts.append(f"선공 승률 {wr_on_play:.1%}로 선공 우위가 낮습니다")
+        else:
+            parts.append(f"선공 승률 {wr_on_play:.1%}로 선/후공 균형이 맞습니다")
+
+        # Part 2: 해석 (Interpretation)
+        if avg_length < 8.5 and wr_on_play > 0.525:
+            parts.append("→ 템포와 초반 압박이 중요한 빠른 포맷입니다")
+        elif avg_length > 9.0 and wr_on_play < 0.515:
+            parts.append("→ 카드 밸류와 후반 전략이 중요한 느린 포맷입니다")
+        elif avg_length < 8.5 or wr_on_play > 0.52:
+            parts.append("→ 빠른 편이지만 균형 잡힌 포맷입니다")
+        elif avg_length > 9.0 or wr_on_play < 0.515:
+            parts.append("→ 느린 편이지만 다양한 전략이 가능합니다")
+        else:
+            parts.append("→ 균형 잡힌 포맷으로 다양한 전략이 가능합니다")
+    else:
+        # Fallback to indirect metrics only
+        if tempo_ratio >= 1.02:
+            parts.append("템포 비율이 높아 빠른 포맷으로 추정됩니다")
+        elif tempo_ratio <= 0.97:
+            parts.append("템포 비율이 낮아 느린 포맷으로 추정됩니다")
+        else:
+            parts.append("템포 비율이 평균 수준입니다")
+
+        if aggro_advantage > 0.02:
+            parts.append("저마나 카드가 강세를 보입니다")
+        elif aggro_advantage < -0.02:
+            parts.append("고마나 카드가 강세를 보입니다")
+
+    return ". ".join(parts) + "."
+
+
+def calculate_format_speed(
+    cards: list[Card],
+    play_draw_data: Optional[dict] = None,
+) -> FormatSpeed:
     """Calculate format speed indicators.
 
-    Uses indirect metrics:
-    - tempo_ratio: OH WR / GD WR
-    - aggro_advantage: low_cmc_wr - high_cmc_wr
+    Uses direct API metrics (preferred) and indirect card-based metrics.
+
+    Args:
+        cards: List of Card objects with stats
+        play_draw_data: Optional dict from 17lands play_draw API
+
+    Returns:
+        FormatSpeed object with speed analysis
     """
     # Filter cards with sufficient games
     valid_cards = [c for c in cards if c.stats.gih_games >= 200]
@@ -145,9 +258,9 @@ def calculate_format_speed(cards: list[Card]) -> FormatSpeed:
     if not valid_cards:
         return FormatSpeed()
 
-    # Calculate OH and GD averages
-    oh_wrs = [c.stats.oh_wr for c in valid_cards if c.stats.oh_wr > 0]
-    gd_wrs = [c.stats.gd_wr for c in valid_cards if c.stats.gd_wr > 0]
+    # Calculate OH and GD averages (indirect metrics)
+    oh_wrs = [c.stats.oh_wr for c in valid_cards if c.stats.oh_wr is not None and c.stats.oh_wr > 0]
+    gd_wrs = [c.stats.gd_wr for c in valid_cards if c.stats.gd_wr is not None and c.stats.gd_wr > 0]
 
     avg_oh_wr = statistics.mean(oh_wrs) if oh_wrs else 0.5
     avg_gd_wr = statistics.mean(gd_wrs) if gd_wrs else 0.5
@@ -156,10 +269,10 @@ def calculate_format_speed(cards: list[Card]) -> FormatSpeed:
     tempo_ratio = avg_oh_wr / avg_gd_wr if avg_gd_wr > 0 else 1.0
 
     # CMC-based aggro advantage (only if cards have cmc data from Scryfall)
-    # Also filter out cards with gih_wr = 0 (data quality issue)
+    # Also filter out cards with gih_wr = 0 or null (data quality issue)
     cards_with_cmc = [
         c for c in valid_cards
-        if c.cmc is not None and c.stats.gih_wr > 0
+        if c.cmc is not None and c.stats.gih_wr is not None and c.stats.gih_wr > 0
     ]
 
     if cards_with_cmc:
@@ -184,39 +297,59 @@ def calculate_format_speed(cards: list[Card]) -> FormatSpeed:
         aggro_advantage = 0.0
         logger.info("CMC data not available - aggro_advantage calculated as 0")
 
-    # Determine speed label based on tempo_ratio (primary) and aggro_advantage (secondary)
-    # Adjusted thresholds based on real data distribution:
-    # Most formats cluster around 0.97-1.01, so thresholds are tightened
+    # Extract direct API metrics if available
+    average_game_length: Optional[float] = None
+    win_rate_on_play: Optional[float] = None
+    play_draw_sample_size: Optional[int] = None
+    turns_distribution: list[int] = []
+
+    if play_draw_data:
+        average_game_length = play_draw_data.get("average_game_length")
+        win_rate_on_play = play_draw_data.get("win_rate_on_play")
+        play_draw_sample_size = play_draw_data.get("sample_size")
+        turns_distribution = play_draw_data.get("turns", [])
+
+    # Determine speed label - prioritize direct API metrics if available
     conflicts = []
 
-    if tempo_ratio >= 1.03:
-        base_speed = "빠름"
-    elif tempo_ratio >= 0.99:
-        base_speed = "보통"
-    elif tempo_ratio >= 0.96:
-        base_speed = "약간 느림"
-    else:
-        base_speed = "느림"
+    if average_game_length is not None and win_rate_on_play is not None:
+        # Use direct API metrics (more reliable)
+        base_speed, api_score = _classify_speed_from_api(average_game_length, win_rate_on_play)
 
-    # Secondary adjustment based on aggro_advantage
-    # Positive = low CMC cards overperform = faster format
-    # Negative = high CMC cards overperform = slower format
-    if aggro_advantage > 0.03:
-        # Strong aggro advantage suggests faster format
-        if base_speed == "보통":
+        # Check for conflicts with indirect metrics
+        indirect_fast = tempo_ratio >= 1.02 or aggro_advantage > 0.03
+        indirect_slow = tempo_ratio <= 0.97 or aggro_advantage < -0.03
+
+        if api_score >= 1 and indirect_slow:
+            conflicts.append("API는 빠름을 나타내지만 간접 지표는 느림을 시사")
+        elif api_score <= -1 and indirect_fast:
+            conflicts.append("API는 느림을 나타내지만 간접 지표는 빠름을 시사")
+    else:
+        # Fallback to indirect metrics only
+        if tempo_ratio >= 1.03:
             base_speed = "빠름"
-            conflicts.append("CMC 기반 분석: 저마나 카드 강세")
-        elif base_speed == "약간 느림":
+        elif tempo_ratio >= 0.99:
             base_speed = "보통"
-            conflicts.append("CMC 기반 분석이 템포 분석과 상충")
-    elif aggro_advantage < -0.03:
-        # Strong control advantage suggests slower format
-        if base_speed == "보통":
+        elif tempo_ratio >= 0.96:
             base_speed = "약간 느림"
-            conflicts.append("CMC 기반 분석: 고마나 카드 강세")
-        elif base_speed == "빠름":
-            base_speed = "보통"
-            conflicts.append("CMC 기반 분석이 템포 분석과 상충")
+        else:
+            base_speed = "느림"
+
+        # Secondary adjustment based on aggro_advantage
+        if aggro_advantage > 0.03:
+            if base_speed == "보통":
+                base_speed = "빠름"
+                conflicts.append("CMC 기반 분석: 저마나 카드 강세")
+            elif base_speed == "약간 느림":
+                base_speed = "보통"
+                conflicts.append("CMC 기반 분석이 템포 분석과 상충")
+        elif aggro_advantage < -0.03:
+            if base_speed == "보통":
+                base_speed = "약간 느림"
+                conflicts.append("CMC 기반 분석: 고마나 카드 강세")
+            elif base_speed == "빠름":
+                base_speed = "보통"
+                conflicts.append("CMC 기반 분석이 템포 분석과 상충")
 
     # Check for other conflicts
     if tempo_ratio >= 1.02 and aggro_advantage < -0.02:
@@ -224,18 +357,30 @@ def calculate_format_speed(cards: list[Card]) -> FormatSpeed:
     if tempo_ratio < 0.97 and aggro_advantage > 0.02:
         conflicts.append("템포 비율은 느리지만 저마나 카드가 강함")
 
-    # Generate recommendation
-    if base_speed == "빠름":
+    # Generate interpretation text
+    speed_interpretation = _generate_speed_interpretation(
+        average_game_length, win_rate_on_play, tempo_ratio, aggro_advantage
+    )
+
+    # Generate recommendation based on speed
+    if base_speed in ("초고속", "빠름"):
         recommendation = "템포/어그로 덱 유리, 2드롭 및 커브 중요"
     elif base_speed == "약간 느림":
         recommendation = "약간 느린 포맷, 밸류 중시하되 템포 무시 금지"
-    elif base_speed == "느림":
+    elif base_speed in ("느림", "매우 느림"):
         recommendation = "밸류/컨트롤 덱 유리, 후반 카드와 제거기 중요"
     else:  # 보통
         recommendation = "균형 잡힌 포맷, 다양한 전략 가능"
 
     return FormatSpeed(
         speed_label=base_speed,
+        # Direct API metrics
+        average_game_length=average_game_length,
+        win_rate_on_play=win_rate_on_play,
+        play_draw_sample_size=play_draw_sample_size,
+        turns_distribution=turns_distribution,
+        speed_interpretation=speed_interpretation,
+        # Indirect metrics
         tempo_ratio=tempo_ratio,
         aggro_advantage=aggro_advantage,
         avg_oh_wr=avg_oh_wr,
@@ -258,10 +403,10 @@ def calculate_splash_indicator(cards: list[Card]) -> SplashIndicator:
     dual_lands = [c for c in cards if is_dual_land(c)]
     mana_fixers = [c for c in cards if is_mana_fixer(c)]
 
-    # Calculate format average WR (filter out gih_wr = 0 data quality issues)
+    # Calculate format average WR (filter out gih_wr = 0 or null data quality issues)
     valid_cards = [
         c for c in cards
-        if c.stats.gih_games >= 200 and c.stats.gih_wr > 0
+        if c.stats.gih_games >= 200 and c.stats.gih_wr is not None and c.stats.gih_wr > 0
     ]
     format_avg_wr = (
         statistics.mean(c.stats.gih_wr for c in valid_cards) if valid_cards else 0.5
@@ -275,11 +420,11 @@ def calculate_splash_indicator(cards: list[Card]) -> SplashIndicator:
         dual_land_alsa = 7.0  # Neutral default
         dual_land_pick_rate = 0.4
 
-    # Mana fixer WR premium (filter out gih_wr = 0)
+    # Mana fixer WR premium (filter out gih_wr = 0 or null)
     if mana_fixers:
         fixer_wrs = [
             c.stats.gih_wr for c in mana_fixers
-            if c.stats.gih_games >= 100 and c.stats.gih_wr > 0
+            if c.stats.gih_games >= 100 and c.stats.gih_wr is not None and c.stats.gih_wr > 0
         ]
         fixer_avg_wr = statistics.mean(fixer_wrs) if fixer_wrs else format_avg_wr
         fixer_wr_premium = fixer_avg_wr - format_avg_wr
@@ -462,7 +607,7 @@ class MetaAnalyzer:
 
         # Step 7: Detect irregularities (sleepers/traps)
         report_progress(7, "Detecting sleeper and trap cards")
-        scored_cards, sleepers, traps = self.irregularity_detector.analyze_all_cards(
+        scored_cards, sleepers, traps, no_data_cards = self.irregularity_detector.analyze_all_cards(
             scored_cards
         )
 
@@ -471,7 +616,9 @@ class MetaAnalyzer:
         archetypes = self.color_scorer.build_all_archetypes(scored_cards, color_pairs)
 
         # Calculate format characteristics
-        format_speed = calculate_format_speed(scored_cards)
+        # Fetch play/draw stats for direct speed metrics
+        play_draw_data = self.loader.fetch_play_draw_stats(expansion, format)
+        format_speed = calculate_format_speed(scored_cards, play_draw_data)
         splash_indicator = calculate_splash_indicator(scored_cards)
 
         # Build snapshot
@@ -483,6 +630,7 @@ class MetaAnalyzer:
             all_cards=scored_cards,
             sleeper_cards=sleepers,
             trap_cards=traps,
+            no_data_cards=no_data_cards,
             archetypes=archetypes,
             total_cards=len(scored_cards),
             total_games_analyzed=self.loader.get_total_games(card_stats),

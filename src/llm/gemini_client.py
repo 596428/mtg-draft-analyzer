@@ -133,11 +133,36 @@ class GeminiClient:
 
         return self._generate(prompt)
 
+    def generate_format_overview(self, snapshot: MetaSnapshot) -> Optional[str]:
+        """
+        Generate comprehensive format overview analysis.
+
+        This produces a detailed 7-section analysis covering:
+        - Format summary
+        - Speed analysis
+        - Color insights
+        - Archetype guide
+        - Splash guide
+        - Sleeper & trap analysis
+        - Draft strategy tips
+
+        Args:
+            snapshot: MetaSnapshot to analyze
+
+        Returns:
+            Comprehensive format overview text or None
+        """
+        prompt = self.prompt_builder.build_format_overview_prompt(snapshot)
+        logger.info(f"Generating format overview for {snapshot.expansion}")
+
+        return self._generate(prompt)
+
     def enrich_snapshot(
         self,
         snapshot: MetaSnapshot,
         include_meta: bool = True,
         include_strategy: bool = True,
+        include_format_overview: bool = True,
     ) -> MetaSnapshot:
         """
         Enrich snapshot with LLM analysis.
@@ -146,6 +171,7 @@ class GeminiClient:
             snapshot: MetaSnapshot to enrich
             include_meta: Whether to include meta analysis
             include_strategy: Whether to include strategy tips
+            include_format_overview: Whether to include format overview
 
         Returns:
             Enriched snapshot
@@ -159,5 +185,8 @@ class GeminiClient:
 
         if include_strategy:
             snapshot.llm_strategy_tips = self.get_strategy_tips(snapshot)
+
+        if include_format_overview:
+            snapshot.llm_format_overview = self.generate_format_overview(snapshot)
 
         return snapshot

@@ -136,7 +136,12 @@ class CardScorer:
         )
 
     def calculate_bayesian_wr(self, card: CardStats) -> float:
-        """Calculate Bayesian-adjusted win rate."""
+        """Calculate Bayesian-adjusted win rate.
+
+        Returns 0.5 for cards with no win rate data.
+        """
+        if card.gih_wr is None:
+            return 0.5  # Neutral baseline for missing data
         return wilson_score_lower_bound(
             card.gih_wins, card.gih_games, self.bayesian_z
         )
@@ -155,13 +160,25 @@ class CardScorer:
 
         Returns:
             Composite score (0-100)
+            Returns 0.0 for cards with no win rate data.
         """
-        # Filter cards with sufficient data
-        valid_cards = [c for c in all_cards if c.gih_games >= self.min_games]
+        # Skip cards with no win rate data
+        if card.gih_wr is None:
+            return 0.0
+
+        # Filter cards with sufficient data AND valid win rates
+        valid_cards = [
+            c for c in all_cards
+            if c.gih_games >= self.min_games and c.gih_wr is not None
+        ]
 
         if len(valid_cards) < 10:
             logger.warning("Insufficient cards for reliable Z-score calculation")
-            valid_cards = all_cards
+            # Fall back to all cards with valid win rates
+            valid_cards = [c for c in all_cards if c.gih_wr is not None]
+
+        if len(valid_cards) < 2:
+            return 50.0  # Neutral score if not enough data
 
         # Calculate Bayesian-adjusted win rates
         adj_wrs = [self.calculate_bayesian_wr(c) for c in valid_cards]
@@ -173,24 +190,27 @@ class CardScorer:
         # GIH WR (Bayesian adjusted)
         z_scores["gih_wr"] = z_score(card_adj_wr, adj_wrs)
 
-        # IWD (Improvement When Drawn)
-        iwds = [c.iwd for c in valid_cards]
-        z_scores["iwd"] = z_score(card.iwd, iwds)
+        # IWD (Improvement When Drawn) - filter out None values
+        iwds = [c.iwd for c in valid_cards if c.iwd is not None]
+        if iwds and card.iwd is not None:
+            z_scores["iwd"] = z_score(card.iwd, iwds)
+        else:
+            z_scores["iwd"] = 0.0
 
         # ALSA Inverse (14 - ALSA, higher = picked earlier = better)
         alsa_inverses = [14 - c.alsa for c in valid_cards]
         z_scores["alsa_inverse"] = z_score(14 - card.alsa, alsa_inverses)
 
-        # Opening Hand WR
-        oh_wrs = [c.oh_wr for c in valid_cards if c.oh_games >= 100]
-        if oh_wrs:
+        # Opening Hand WR - filter out None values
+        oh_wrs = [c.oh_wr for c in valid_cards if c.oh_games >= 100 and c.oh_wr is not None]
+        if oh_wrs and card.oh_wr is not None:
             z_scores["oh_wr"] = z_score(card.oh_wr, oh_wrs)
         else:
             z_scores["oh_wr"] = 0.0
 
-        # Games Drawn WR
-        gd_wrs = [c.gd_wr for c in valid_cards if c.gd_games >= 100]
-        if gd_wrs:
+        # Games Drawn WR - filter out None values
+        gd_wrs = [c.gd_wr for c in valid_cards if c.gd_games >= 100 and c.gd_wr is not None]
+        if gd_wrs and card.gd_wr is not None:
             z_scores["gd_wr"] = z_score(card.gd_wr, gd_wrs)
         else:
             z_scores["gd_wr"] = 0.0
@@ -238,6 +258,16 @@ class CardScorer:
         Returns:
             Card object with computed scores
         """
+        # Handle cards with no win rate data
+        if card.gih_wr is None:
+            return Card(
+                stats=card,
+                composite_score=0.0,
+                grade="N/A",
+                adjusted_gih_wr=0.0,
+                irregularity_type="no_data",
+            )
+
         score = self.calculate_composite_score(card, all_cards)
         grade = self.assign_grade(score)
         adj_wr = self.calculate_bayesian_wr(card)

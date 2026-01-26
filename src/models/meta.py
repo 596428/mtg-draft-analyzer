@@ -54,17 +54,28 @@ class ThresholdConfig:
 
 @dataclass
 class FormatSpeed:
-    """Format speed characteristics based on indirect metrics.
+    """Format speed characteristics based on direct API and indirect metrics.
 
-    Metrics:
+    Direct metrics (from 17lands play_draw API):
+    - average_game_length: Avg game duration in turns (lower = faster)
+    - win_rate_on_play: Win rate when going first (higher = faster)
+
+    Indirect metrics:
     - tempo_ratio: OH WR / GD WR (>1.02 = fast, <0.98 = slow)
     - aggro_advantage: low_cmc_wr - high_cmc_wr (positive = fast)
     """
 
     # Speed classification
-    speed_label: str = "보통"  # 초고속, 빠름, 보통, 느림
+    speed_label: str = "보통"  # 초고속, 빠름, 보통, 느림, 매우 느림
 
-    # Primary metrics
+    # === Direct API metrics (17lands play_draw) ===
+    average_game_length: Optional[float] = None
+    win_rate_on_play: Optional[float] = None
+    play_draw_sample_size: Optional[int] = None
+    turns_distribution: list[int] = field(default_factory=list)
+    speed_interpretation: str = ""  # Human-readable interpretation
+
+    # === Indirect metrics (derived from card data) ===
     tempo_ratio: float = 1.0  # OH WR / GD WR
     aggro_advantage: float = 0.0  # low_cmc_wr - high_cmc_wr
 
@@ -84,6 +95,12 @@ class FormatSpeed:
         """Convert to dictionary for JSON export."""
         return {
             "speed_label": self.speed_label,
+            # Direct API metrics
+            "average_game_length": round(self.average_game_length, 2) if self.average_game_length else None,
+            "win_rate_on_play": round(self.win_rate_on_play, 4) if self.win_rate_on_play else None,
+            "play_draw_sample_size": self.play_draw_sample_size,
+            "speed_interpretation": self.speed_interpretation,
+            # Indirect metrics
             "tempo_ratio": round(self.tempo_ratio, 4),
             "aggro_advantage": round(self.aggro_advantage, 4),
             "avg_oh_wr": round(self.avg_oh_wr, 4),
@@ -148,6 +165,7 @@ class MetaSnapshot:
     all_cards: list[Card] = field(default_factory=list)
     sleeper_cards: list[Card] = field(default_factory=list)
     trap_cards: list[Card] = field(default_factory=list)
+    no_data_cards: list[Card] = field(default_factory=list)
 
     # Color analysis
     color_strengths: list[ColorStrength] = field(default_factory=list)
@@ -164,6 +182,7 @@ class MetaSnapshot:
     # LLM analysis (optional)
     llm_meta_analysis: Optional[str] = None
     llm_strategy_tips: Optional[str] = None
+    llm_format_overview: Optional[str] = None
 
     @property
     def top_colors(self) -> list[ColorStrength]:
@@ -208,9 +227,11 @@ class MetaSnapshot:
             "top_cards": [c.to_dict() for c in self.top_cards[:20]],
             "sleeper_cards": [c.to_dict() for c in self.sleeper_cards[:10]],
             "trap_cards": [c.to_dict() for c in self.trap_cards[:10]],
+            "no_data_cards": [c.to_dict() for c in self.no_data_cards],
             "llm_analysis": {
                 "meta_analysis": self.llm_meta_analysis,
                 "strategy_tips": self.llm_strategy_tips,
+                "format_overview": self.llm_format_overview,
             },
         }
 

@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 
-from src.models.archetype import COLOR_PAIRS, ColorPair
+from src.models.archetype import COLOR_PAIRS, ColorPair, ALL_ARCHETYPE_NAMES
 from src.models.card import CardStats
 
 logger = logging.getLogger(__name__)
@@ -19,10 +19,6 @@ def compute_color_pairs_from_cards(
 
     Primary Signal (70%): Gold card deck_wr
     Secondary Signal (30%): Overperforming mono-color card deck_wr
-
-    This approach provides better discrimination than GIH WR averaging
-    because deck_wr directly measures the performance of decks containing
-    each card, and gold cards are strong indicators of archetype identity.
 
     Args:
         card_stats: List of CardStats from fetch_card_ratings
@@ -50,22 +46,30 @@ def compute_color_pairs_from_cards(
 
     # Step 1: Calculate average deck_wr for each single color
     color_avg = _calculate_color_averages(valid_cards)
-    logger.debug(f"Color averages: {color_avg}")
 
     # Step 2: Identify overperforming mono-color cards
     overperformers = _get_overperformers(valid_cards, color_avg)
-    for color, cards in overperformers.items():
-        logger.debug(f"Overperformers for {color}: {len(cards)} cards")
 
-    # Step 3: Calculate hybrid archetype win rates
+    # Step 3: Identify viable archetypes dynamically
+    # Start with standard 2-color pairs
+    target_archetypes = set(COLOR_PAIRS)
+
+    # Check for 3-color gold cards to detect wedges/shards
+    for card in valid_cards:
+        if len(card.colors) == 3:
+            # If we have valid 3-color cards, add their colors to targets
+            target_archetypes.add(card.colors)
+
+    logger.info(f"Identified {len(target_archetypes)} potential archetypes for analysis")
+
+    # Step 4: Calculate hybrid archetype win rates
     results = []
-    for colors in COLOR_PAIRS:
+    for colors in target_archetypes:
         hybrid_wr, gold_count, mono_count, total_games = _calculate_hybrid_wr(
             colors, valid_cards, overperformers, primary_weight
         )
 
         if hybrid_wr is None:
-            logger.warning(f"Could not calculate WR for {colors}")
             continue
 
         results.append(ColorPair(
@@ -75,10 +79,6 @@ def compute_color_pairs_from_cards(
             win_rate=hybrid_wr,
             is_computed=True,
         ))
-
-        logger.debug(
-            f"{colors}: WR={hybrid_wr:.4f}, gold={gold_count}, mono={mono_count}, games={total_games}"
-        )
 
     # Sort by win rate descending
     results.sort(key=lambda x: x.win_rate, reverse=True)

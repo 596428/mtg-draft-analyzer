@@ -509,6 +509,10 @@ class ColorMetaAnalyzer:
         return snapshot
 
 
+from src.models.archetype import SplashVariant, ColorPair
+
+# ... (imports remain same)
+
 class MetaAnalyzer:
     """Main orchestrator for complete meta analysis."""
 
@@ -544,6 +548,87 @@ class MetaAnalyzer:
         self.calibrator = calibrator or Calibrator()
         self.irregularity_detector = irregularity_detector
         self.gemini_client = gemini_client
+
+    def detect_archetype_structure(
+        self,
+        color_pairs: list[ColorPair],
+        min_share_threshold: float = 0.02,  # 2.0% meta share
+    ) -> tuple[list[ColorPair], dict[str, list[SplashVariant]]]:
+        """
+        Dynamically detect main archetypes and splash variants.
+
+        Args:
+            color_pairs: All color pair data
+            min_share_threshold: Share threshold to be a main archetype
+
+        Returns:
+            Tuple of (main_archetypes, variants_map)
+            - main_archetypes: List of ColorPair for main archetypes
+            - variants_map: Dict mapping main archetype colors to list of variants
+        """
+        # Filter out any None values that might have slipped through
+        color_pairs = [cp for cp in color_pairs if cp is not None]
+        
+        total_games = sum(cp.games for cp in color_pairs)
+        if total_games == 0:
+            return [], {}
+
+        main_pairs = []
+        candidates = []
+
+        # Step 1: Separate main archetypes and candidates
+        for cp in color_pairs:
+            share = cp.games / total_games
+            
+            # Filter extremely low sample size
+            if cp.games < 50:
+                continue
+
+            if share >= min_share_threshold:
+                main_pairs.append(cp)
+            elif share >= 0.005:  # 0.5% min for variants
+                candidates.append(cp)
+        
+        # Ensure we have at least some main archetypes
+        if not main_pairs:
+            # Fallback: take top 5 most played
+            sorted_pairs = sorted(color_pairs, key=lambda x: x.games, reverse=True)
+            main_pairs = sorted_pairs[:5]
+
+        # Step 2: Map variants to main archetypes
+        variants_map = {cp.colors: [] for cp in main_pairs}
+        
+        # Consider ALL viable pairs (main + candidates) as potential variants for others
+        # This allows a 3-color Main Archetype (e.g. WBG) to be a variant of a 2-color Main (e.g. WB)
+        all_potential_variants = main_pairs + candidates
+
+        for variant_cand in all_potential_variants:
+            cand_colors = set(variant_cand.colors)
+            
+            for parent in main_pairs:
+                if parent == variant_cand:
+                    continue
+
+                parent_colors = set(parent.colors)
+                
+                # Check if candidate is a superset (splash)
+                # We strictly look for "Parent + 1 Color" relationship for clean splash recommendations
+                if parent_colors.issubset(cand_colors) and len(cand_colors) == len(parent_colors) + 1:
+                    
+                    added_colors = cand_colors - parent_colors
+                    added_color_str = "".join(sorted(list(added_colors)))
+                    
+                    variant = SplashVariant(
+                        colors=variant_cand.colors,
+                        added_color=added_color_str,
+                        win_rate=variant_cand.win_rate,
+                        games=variant_cand.games,
+                        meta_share=variant_cand.games / total_games,
+                        win_rate_delta=variant_cand.win_rate - parent.win_rate
+                    )
+                    variants_map[parent.colors].append(variant)
+
+        return main_pairs, variants_map
 
     def analyze(
         self,
@@ -582,6 +667,10 @@ class MetaAnalyzer:
             expansion, format, card_stats=card_stats
         )
 
+        # New Step: Detect archetype structure
+        main_pairs, variants_map = self.detect_archetype_structure(color_pairs)
+        logger.info(f"Detected {len(main_pairs)} main archetypes and {sum(len(v) for v in variants_map.values())} variants")
+
         # Step 3: Calibrate thresholds
         report_progress(3, "Calibrating thresholds from data distribution")
         thresholds = self.calibrator.calibrate(card_stats)
@@ -602,7 +691,11 @@ class MetaAnalyzer:
 
         # Step 6: Load archetype-specific ratings and calculate variance
         report_progress(6, "Analyzing archetype variance")
-        archetype_data = self.loader.fetch_all_archetype_ratings(expansion, format)
+        # Fetch ratings only for detected main archetypes
+        main_colors = [cp.colors for cp in main_pairs]
+        archetype_data = self.loader.fetch_all_archetype_ratings(
+            expansion, format, color_pairs=main_colors
+        )
         scored_cards = enrich_cards_with_variance(scored_cards, archetype_data)
 
         # Step 7: Detect irregularities (sleepers/traps)
@@ -613,7 +706,17 @@ class MetaAnalyzer:
 
         # Step 8: Build archetypes
         report_progress(8, "Building archetype analysis")
-        archetypes = self.color_scorer.build_all_archetypes(scored_cards, color_pairs)
+        # Build only main archetypes
+        archetypes = self.color_scorer.build_all_archetypes(scored_cards, main_pairs)
+        
+        # Attach variants
+        for arch in archetypes:
+            if arch.colors in variants_map:
+                arch.variants = sorted(
+                    variants_map[arch.colors], 
+                    key=lambda v: v.win_rate, 
+                    reverse=True
+                )
 
         # Calculate format characteristics
         # Fetch play/draw stats for direct speed metrics
@@ -639,9 +742,11 @@ class MetaAnalyzer:
         )
 
         # Add color strength analysis
+        # For color strength, we still consider all pairs for "Archetype Success" metric?
+        # Or just main pairs? Using all_pairs is more accurate for overall color feel.
         snapshot.color_strengths = self.color_scorer.calculate_all_color_strengths(
             scored_cards,
-            color_pairs,
+            color_pairs, # Use all pairs for color calculation
         )
 
         # Step 9: LLM enrichment (optional)

@@ -1,7 +1,9 @@
 """17lands API data loader."""
 
 import logging
+import re
 from typing import Optional
+from datetime import datetime
 
 import requests
 
@@ -15,23 +17,39 @@ logger = logging.getLogger(__name__)
 def normalize_color_pair(colors: str) -> str:
     """
     Normalize color pair to WUBRG alphabetical order for 17lands API.
-
     17lands API expects color pairs in WUBRG order (W < U < B < R < G).
-    For example: WG not GW, WR not RW, UG not GU.
-
-    Args:
-        colors: Two-letter color pair (e.g., "GW", "RW", "GU")
-
-    Returns:
-        Normalized color pair in WUBRG order (e.g., "WG", "WR", "UG")
     """
-    if len(colors) != 2:
+    if len(colors) <= 1:
         return colors
+    
     wubrg_order = "WUBRG"
-    c1, c2 = colors[0].upper(), colors[1].upper()
-    if wubrg_order.index(c1) > wubrg_order.index(c2):
-        return c2 + c1
-    return colors
+    # Sort colors based on their index in WUBRG
+    sorted_colors = sorted(list(colors.upper()), key=lambda c: wubrg_order.find(c))
+    return "".join(sorted_colors)
+
+
+def extract_color_code(name: str) -> str:
+    """
+    Extract raw WUBRG color code from 17lands color name and normalize it.
+    Example: "Azorius (WU)" -> "WU", "TO-COLOWR" -> "WR", "RGU" -> "URG"
+    """
+    # 1. Try to find colors in parentheses: "Azorius (WU)" -> "WU"
+    match = re.search(r'\(([WUBRG]+)\)', name)
+    if match:
+        return normalize_color_pair(match.group(1))
+    
+    # 2. Try to find WUBRG pattern at the end of a string (handling "TO-COLOWR" style)
+    # Looking for 1-5 WUBRG characters at the very end
+    match = re.search(r'([WUBRG]{1,5})$', name.upper())
+    if match:
+        return normalize_color_pair(match.group(1))
+    
+    # 3. Last resort: just normalize what we have if it looks like colors
+    cleaned = "".join(c for c in name.upper() if c in "WUBRG")
+    if cleaned and len(cleaned) <= 5:
+        return normalize_color_pair(cleaned)
+        
+    return normalize_color_pair(name)
 
 
 class SeventeenLandsLoader:
@@ -125,6 +143,21 @@ class SeventeenLandsLoader:
 
         return cards
 
+    def _merge_color_pairs(self, raw_data: list[dict]) -> list[ColorPair]:
+        """Parse raw data and merge duplicates based on normalized color code."""
+        merged_map = {}
+        for d in raw_data:
+            cp = ColorPair.from_17lands(d)
+            if cp:
+                if cp.colors in merged_map:
+                    existing = merged_map[cp.colors]
+                    existing.wins += cp.wins
+                    existing.games += cp.games
+                    existing.win_rate = existing.wins / existing.games if existing.games > 0 else 0.0
+                else:
+                    merged_map[cp.colors] = cp
+        return list(merged_map.values())
+
     def fetch_color_ratings(
         self,
         expansion: str,
@@ -154,13 +187,16 @@ class SeventeenLandsLoader:
             cached = self.cache.get(*cache_key)
             if cached:
                 logger.info(f"Using cached color ratings for {expansion} {format}")
-                return [ColorPair.from_17lands(d) for d in cached]
+                return self._merge_color_pairs(cached)
 
         # Fetch from API
         logger.info(f"Fetching color ratings for {expansion} {format}")
         params = {
             "expansion": expansion,
-            "format": format,
+            "event_type": format,  # API expects event_type, not format
+            "start_date": "2019-01-01",
+            "end_date": datetime.now().strftime("%Y-%m-%d"),
+            "combine_plus": "true",
         }
 
         try:
@@ -170,9 +206,9 @@ class SeventeenLandsLoader:
             if use_cache:
                 self.cache.set(raw_data, *cache_key)
 
-            # Parse and return
-            colors = [ColorPair.from_17lands(d) for d in raw_data]
-            logger.info(f"Loaded {len(colors)} color pairs for {expansion} {format}")
+            # Parse and merge
+            colors = self._merge_color_pairs(raw_data)
+            logger.info(f"Loaded {len(colors)} unique color pairs for {expansion} {format}")
 
             return colors
 
@@ -250,17 +286,18 @@ class SeventeenLandsLoader:
         color_pairs: Optional[list[str]] = None,
     ) -> dict[str, list[dict]]:
         """
-        Fetch card ratings for all archetypes.
+        Fetch card ratings for all provided archetypes.
 
         Args:
             expansion: Set code
             format: Draft format
-            color_pairs: List of color pairs to fetch (defaults to all 10)
+            color_pairs: List of color codes to fetch
 
         Returns:
-            Dict mapping color pair to list of card data
+            Dict mapping color code to list of card data
         """
         if color_pairs is None:
+            # Default to standard 10 if none provided for backward compatibility
             color_pairs = ["WU", "UB", "BR", "RG", "WG", "WB", "UR", "BG", "WR", "UG"]
 
         results = {}

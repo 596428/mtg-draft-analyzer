@@ -60,6 +60,27 @@ GUILD_NAMES = {
     "UG": "Simic",     # normalized from GU
 }
 
+# 3-Color Shards (Center color + allies)
+SHARDS = {
+    "WUG": "Bant",
+    "WUB": "Esper",
+    "UBR": "Grixis",
+    "BRG": "Jund",
+    "WRG": "Naya",
+}
+
+# 3-Color Wedges (Center color + enemies)
+WEDGES = {
+    "WBG": "Abzan",
+    "WUR": "Jeskai",
+    "UBG": "Sultai",
+    "WBR": "Mardu",
+    "URG": "Temur",
+}
+
+# Combine all archetype names
+ALL_ARCHETYPE_NAMES = {**GUILD_NAMES, **SHARDS, **WEDGES}
+
 
 @dataclass
 class ColorPair:
@@ -74,12 +95,37 @@ class ColorPair:
     @property
     def guild_name(self) -> str:
         """Get guild name for the color pair."""
-        return GUILD_NAMES.get(self.colors, self.colors)
+        return ALL_ARCHETYPE_NAMES.get(self.colors, self.colors)
 
     @classmethod
-    def from_17lands(cls, data: dict) -> "ColorPair":
+    def from_17lands(cls, data: dict) -> Optional["ColorPair"]:
         """Create ColorPair from 17lands API response."""
-        colors = data.get("color_name", "") or ""
+        from src.data.loader import extract_color_code
+        
+        raw_name = data.get("color_name", "") or ""
+        colors = extract_color_code(raw_name)
+        
+        # Filter out aggregate stats and generic splash entries
+        # Stricter check for aggregate terms
+        ignore_terms = [
+            "all decks", "two-color", "three-color", "four-color", "five-color", 
+            "+ splash", "to-colo", "thee-colo", "fo-colo"
+        ]
+        
+        if any(term in raw_name.lower() for term in ignore_terms) and len(colors) <= 2 and "+ splash" not in raw_name.lower():
+            # If it's a generic "Two-color" entry, we ignore it
+            # But we keep specific ones like "WR" that were extracted from "TO-COLOWR"
+            if any(term in raw_name.lower() for term in ["all decks", "two-color", "three-color"]):
+                return None
+
+        # If colors still contains non-MTG characters, it's invalid
+        if not all(c in "WUBRG" for c in colors):
+            return None
+            
+        # Ignore generic "+ splash" that doesn't specify which colors
+        if "+ splash" in raw_name.lower() and len(colors) <= 2:
+            return None
+            
         games = data.get("games", 0) or 0
         wins = data.get("wins", 0) or 0
         win_rate = wins / games if games > 0 else 0.0
@@ -100,6 +146,29 @@ class ColorPair:
             "games": self.games,
             "win_rate": round(self.win_rate, 4),
             "is_computed": self.is_computed,
+        }
+
+
+@dataclass
+class SplashVariant:
+    """Statistics for a splash variation of an archetype."""
+    
+    colors: str  # e.g., "WUB" for WU base
+    added_color: str  # e.g., "B"
+    win_rate: float = 0.0
+    games: int = 0
+    meta_share: float = 0.0
+    win_rate_delta: float = 0.0  # Difference from base archetype
+    
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            "colors": self.colors,
+            "added_color": self.added_color,
+            "win_rate": round(self.win_rate, 4),
+            "games": self.games,
+            "meta_share": round(self.meta_share, 4),
+            "win_rate_delta": round(self.win_rate_delta, 4),
         }
 
 
@@ -176,6 +245,9 @@ class Archetype:
     synergy_lift: float = 0.0  # Average synergy lift across cards
     synergy_std: float = 0.0  # Synergy stability (lower = more consistent)
 
+    # Splash variations
+    variants: list[SplashVariant] = field(default_factory=list)
+
     @property
     def colors(self) -> str:
         """Color pair string shortcut."""
@@ -209,6 +281,7 @@ class Archetype:
             "trending": self.trending,
             "synergy_lift": round(self.synergy_lift, 4),
             "synergy_std": round(self.synergy_std, 4),
+            "variants": [v.to_dict() for v in self.variants],
         }
 
     def __repr__(self) -> str:

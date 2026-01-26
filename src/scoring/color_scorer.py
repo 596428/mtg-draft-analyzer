@@ -358,10 +358,20 @@ class ColorScorer:
         """
         # Get cards in this archetype
         colors = color_pair.colors
+        
+        # Filter logic:
+        # Include card if its colors are a subset of the archetype colors.
+        # This handles:
+        # - Mono color cards (e.g. W in WU)
+        # - Exact match 2-color cards (e.g. WU in WU)
+        # - Exact match 3-color cards (e.g. WBG in WBG)
+        # - 2-color cards in 3-color archetype (e.g. WB in WBG)
+        # Excludes:
+        # - Colorless cards (len == 0) - unless we want them? Usually not archetype specific.
+        # - Cards with colors outside the archetype (e.g. WR in WU)
         archetype_cards = [
             c for c in cards
-            if all(color in c.colors for color in colors)
-            or (len(c.colors) == 1 and c.colors in colors)
+            if len(c.colors) > 0 and set(c.colors).issubset(set(colors))
         ]
 
         # Find key cards by rarity
@@ -416,8 +426,8 @@ class ColorScorer:
             and c.stats.archetype_wrs.get(colors, 0) < c.stats.gih_wr - 0.02
         ]
 
-        # Calculate meta share (based on games)
-        total_games = sum(cp.games for cp in all_color_pairs if len(cp.colors) == 2)
+        # Calculate meta share (based on total games across all pairs)
+        total_games = sum(cp.games for cp in all_color_pairs)
         meta_share = color_pair.games / total_games if total_games > 0 else 0
 
         # Calculate commons/uncommons score for formula
@@ -429,20 +439,11 @@ class ColorScorer:
         )
 
         # Calculate strength score with win rate as primary factor
-        # Previous formula had synergy_lift * 200 which was way too high
-        # New formula centers on win rate deviation from 50% baseline
-        #
-        # Components:
-        # - Win rate deviation: (WR - 0.50) * 1000 → ±5% WR = ±50 points
-        # - Synergy lift: avg_synergy_lift * 50 → 2% lift = 1 point
-        # - Synergy density: ratio of synergy cards
-        # - Card quality: commons and uncommons average scores
-        # - Stability: consistency bonus
         strength = (
             (color_pair.win_rate - 0.50) * 1000 +  # WR deviation (primary)
-            avg_synergy_lift * 50 +                 # Synergy contribution (reduced)
+            avg_synergy_lift * 50 +                 # Synergy contribution
             synergy_card_ratio * 15 +               # Synergy density
-            stability_bonus * 2 +                   # Consistency bonus (0-10)
+            stability_bonus * 2 +                   # Consistency bonus
             commons_score * 0.1 +                   # Common quality
             uncommons_score * 0.1                   # Uncommon quality
         )
@@ -467,24 +468,27 @@ class ColorScorer:
         color_pairs: list[ColorPair],
     ) -> list[Archetype]:
         """
-        Build archetype analysis for all color pairs.
+        Build archetype analysis for provided color pairs.
+
+        Does NOT filter by 2-color anymore. The caller (MetaAnalyzer)
+        should provide the list of 'Main Archetypes' to be built.
 
         Args:
             cards: All scored cards
-            color_pairs: Color pair data
+            color_pairs: List of ColorPairs to build Archetypes for
 
         Returns:
             List of Archetypes sorted by win rate
         """
         archetypes = []
 
-        # Filter to only 2-color pairs
-        two_color_pairs = [
-            cp for cp in color_pairs
-            if len(cp.colors) == 2 and cp.games >= 1000
-        ]
-
-        for color_pair in two_color_pairs:
+        # We assume the caller (MetaAnalyzer) has already filtered 
+        # color_pairs to only include the ones that should be main archetypes.
+        for color_pair in color_pairs:
+            # Skip if games are too low to be reliable (unless it's a fallback)
+            if color_pair.games < 200 and not color_pair.is_computed:
+                continue
+                
             archetype = self.build_archetype(color_pair, cards, color_pairs)
             archetypes.append(archetype)
 

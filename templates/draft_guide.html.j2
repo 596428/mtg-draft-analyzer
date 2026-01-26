@@ -1698,6 +1698,95 @@
         .speed-conflicts li {
             margin-bottom: 2px;
         }
+        /* ============================================
+           ARCHETYPE TIER LIST
+           ============================================ */
+        .tier-list-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: var(--space-lg);
+        }
+        
+        .tier-list-table th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        
+        .tier-list-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        
+        .tier-list-table tr:hover td {
+            background: var(--bg-hover);
+            cursor: pointer;
+        }
+        
+        .tier-rank {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            width: 60px;
+            text-align: center;
+        }
+        
+        .tier-rank.top-3 {
+            color: var(--accent-yellow);
+        }
+        
+        .tier-name {
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tier-wr {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .tier-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .tier-splash {
+            font-size: 0.85rem;
+        }
+        
+        .splash-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            gap: 4px;
+        }
+        
+        .splash-tag.positive {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: rgba(63, 185, 80, 0.1);
+        }
+        
+        .splash-tag.negative {
+            border-color: var(--text-muted);
+            color: var(--text-muted);
+        }
+
+        .splash-delta {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
     </style>
 </head>
 <body>
@@ -1847,10 +1936,59 @@
         </section>
 
         <!-- ==========================================
-             COLOR RANKINGS
+             ARCHETYPE TIER LIST
              ========================================== -->
-        <section id="color-rankings">
-            <h2>🎨 Color Rankings</h2>
+        <section id="archetype-tier-list">
+            <h2>🏆 Archetype Tier List</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
+                Archetypes with >2.0% meta share. Click to view details.
+            </p>
+            
+            <table class="tier-list-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">Rank</th>
+                        <th>Archetype</th>
+                        <th>Win Rate</th>
+                        <th>Meta Share</th>
+                        <th>Best Splash Variant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for arch in archetypes %}
+                    <tr onclick="document.querySelector('button[data-arch=\'{{ arch.colors }}\']').click(); document.getElementById('archetypes').scrollIntoView({behavior: 'smooth'});">
+                        <td class="tier-rank {% if loop.index <= 3 %}top-3{% endif %}">#{{ arch.rank }}</td>
+                        <td>
+                            <div class="tier-name">
+                                <span class="arch-icon">{{ arch.colors }}</span>
+                                {{ arch.guild_name }}
+                            </div>
+                        </td>
+                        <td class="tier-wr">{{ arch.win_rate | percent2 }}</td>
+                        <td class="tier-meta">{{ arch.meta_share | percent }}</td>
+                        <td class="tier-splash">
+                            {% if arch.variants and arch.variants|length > 0 %}
+                                {% set best_variant = arch.variants[0] %}
+                                {% set delta_sign = "+" if best_variant.win_rate_delta > 0 else "" %}
+                                <div class="splash-tag {% if best_variant.win_rate_delta > 0 %}positive{% else %}negative{% endif %}">
+                                    <span>+{{ best_variant.added_color }}</span>
+                                    <span class="splash-delta">{{ delta_sign }}{{ (best_variant.win_rate_delta * 100) | round(1) }}%</span>
+                                </div>
+                            {% else %}
+                                <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ==========================================
+             COLOR STRENGTH (Old Color Rankings)
+             ========================================== -->
+        <section id="color-strength">
+            <h2>🎨 Single Color Strength</h2>
             <div class="color-grid">
                 {% for color in color_strengths %}
                 <div class="color-card" data-color="{{ color.color }}">
@@ -1888,7 +2026,7 @@
              ARCHETYPE GUIDE
              ========================================== -->
         <section id="archetypes">
-            <h2>🏛️ Archetypes</h2>
+            <h2>🏛️ Archetypes Detail</h2>
             <div class="archetype-tabs">
                 {% for arch in archetypes %}
                 <button data-arch="{{ arch.colors }}" {% if loop.first %}class="active"{% endif %}>

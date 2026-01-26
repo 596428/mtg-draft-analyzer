@@ -323,16 +323,26 @@ class HtmlReportGenerator:
     ) -> list[Card]:
         """Get top performing cards for a specific archetype.
 
-        Only includes cards that have viability data for this archetype
-        (i.e., archetype_wrs contains this archetype's colors).
-        Cards are sorted by composite_score (descending).
+        Includes cards if:
+        1. They have explicit win rate data for this archetype colors.
+        2. Their color identity is a subset of the archetype colors (for 3-color archetypes).
         """
-        # Find cards that have viability data for this specific archetype
         matching_cards = []
+        arch_colors_set = set(archetype.colors)
+        
         for card in snapshot.all_cards:
-            # Only include cards that have data for this archetype
+            # Check 1: Explicit data match (preferred)
             if archetype.colors in card.stats.archetype_wrs:
                 matching_cards.append(card)
+                continue
+                
+            # Check 2: Subset logic (important for 3-color archetypes to show 2-color/mono cards)
+            # Only include cards with some colors, and they must be a subset of the archetype
+            if card.colors and set(card.colors).issubset(arch_colors_set):
+                # We only add it if it's a reasonably good card (Grade C or better) 
+                # to avoid cluttering 3-color lists with every single mono filler
+                if card.composite_score >= 40:
+                    matching_cards.append(card)
 
         # Sort by composite_score (descending)
         matching_cards.sort(key=lambda c: c.composite_score, reverse=True)

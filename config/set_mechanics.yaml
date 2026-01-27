@@ -1,5 +1,6 @@
 # Set Mechanics Configuration
 # Provides LLM with set-specific context for draft analysis
+# Only mechanics are sent to LLM - themes/speed/tips are calculated from data
 # Add new sets as needed
 
 ECL:
@@ -17,7 +18,7 @@ ECL:
     - name: "Blight"
       description: >
         A new keyword action involving -1/-1 counters. To blight N, put N -1/-1 counters on a creature you control
-        as a cost or effect. This can be used on your own creatures to fuel additional benefits or on opponents’
+        as a cost or effect. This can be used on your own creatures to fuel additional benefits or on opponents'
         creatures to weaken them.
       strategy_tip: >
         Blight incentives often reward self-damage and board manipulation;
@@ -47,13 +48,13 @@ ECL:
     - name: "Convoke"
       description: >
         A returning keyword allowing you to tap creatures to help pay for spells. Each tapped creature can pay
-        either one mana of its color or one colorless mana toward the spell’s cost.
+        either one mana of its color or one colorless mana toward the spell's cost.
       strategy_tip: >
         Convoke rewards wide boards; drafting creatures with evasion or utility increases the chances of
         casting high-impact spells ahead of schedule.
     - name: "Behold"
       description: >
-        A returning mechanic where a card asks you to “behold” a specific creature type as part of a cost or effect.
+        A returning mechanic where a card asks you to "behold" a specific creature type as part of a cost or effect.
         To behold something, choose a permanent you control or reveal one from your hand of the required type.
       strategy_tip: >
         Behold effects incentivize commitment to creature types;
@@ -72,15 +73,6 @@ ECL:
       strategy_tip: >
         Persist supports longer board games and combos with -1/-1 counter synergies;
         pick these when you have ways to remove counters or recur creatures.
-  themes:
-    - "Tribal Synergies (Elves, Faeries, Goblins, Elementals)"
-    - "ETB Value"
-    - "Color Pair Identities"
-  speed_context: "Medium-paced format favoring synergy"
-  draft_tips:
-    - "Identify open tribes early - tribal payoffs scale dramatically"
-    - "Some tribes span multiple colors - be flexible"
-    - "Signpost uncommons indicate tribe direction"
 
 DSK:
   name: "Duskmourn: House of Horror"
@@ -104,15 +96,6 @@ DSK:
     - name: "Delirium"
       description: "Bonus effects when 4+ card types in your graveyard"
       strategy_tip: "Self-mill and varied permanent types enable delirium"
-  themes:
-    - "Survival/Defensive strategies"
-    - "Enchantment synergies"
-    - "Graveyard matters"
-  speed_context: "Slower format with defensive mechanics"
-  draft_tips:
-    - "Survival decks want early blockers, not attackers"
-    - "Track enchantment count for eerie synergies"
-    - "Delirium requires deck building consideration"
 
 FDN:
   name: "Foundations"
@@ -121,15 +104,6 @@ FDN:
     - name: "Core Set Gameplay"
       description: "Straightforward mechanics with minimal complexity"
       strategy_tip: "Focus on curve and card quality over synergy"
-  themes:
-    - "Curve-based aggro"
-    - "Value-based midrange"
-    - "Removal-heavy control"
-  speed_context: "Medium-fast format emphasizing fundamentals"
-  draft_tips:
-    - "Curve is king - prioritize 2-drops"
-    - "Premium removal is very high pick"
-    - "Bombs matter more in low-synergy formats"
 
 # Template for new sets:
 # SET_CODE:
@@ -139,9 +113,3 @@ FDN:
 #     - name: "Mechanic Name"
 #       description: "What the mechanic does"
 #       strategy_tip: "Draft strategy advice"
-#   themes:
-#     - "Theme 1"
-#     - "Theme 2"
-#   speed_context: "Fast/Medium/Slow format description"
-#   draft_tips:
-#     - "Specific draft advice"

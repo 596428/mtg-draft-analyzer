@@ -78,15 +78,23 @@ class CardScorer:
         "gd_wr": 0.10,
     }
 
+    # 17lands Z-score threshold converted to 0-100 scale
+    # Formula: score = 50 + z * 15
+    # Reference: https://github.com/bstaple1/MTGA_Draft_17Lands GRADE_DEVIATION_DICT
     GRADE_THRESHOLDS = {
-        "A+": 90,
-        "A": 80,
-        "B+": 70,
-        "B": 60,
-        "C+": 50,
-        "C": 40,
-        "D": 30,
-        "F": 0,
+        "A+": 80,   # Z >= 2.00 → 50 + 2.00 * 15 = 80
+        "A": 75,    # Z >= 1.67 → 50 + 1.67 * 15 = 75.05
+        "A-": 70,   # Z >= 1.33 → 50 + 1.33 * 15 = 69.95
+        "B+": 65,   # Z >= 1.00 → 50 + 1.00 * 15 = 65
+        "B": 60,    # Z >= 0.67 → 50 + 0.67 * 15 = 60.05
+        "B-": 55,   # Z >= 0.33 → 50 + 0.33 * 15 = 54.95
+        "C+": 50,   # Z >= 0.00 → 50 + 0.00 * 15 = 50
+        "C": 45,    # Z >= -0.33 → 50 + (-0.33) * 15 = 45.05
+        "C-": 40,   # Z >= -0.67 → 50 + (-0.67) * 15 = 39.95
+        "D+": 35,   # Z >= -1.00 → 50 + (-1.00) * 15 = 35
+        "D": 30,    # Z >= -1.33 → 50 + (-1.33) * 15 = 30.05
+        "D-": 25,   # Z >= -1.67 → 50 + (-1.67) * 15 = 24.95
+        "F": 0,     # Z < -1.67
     }
 
     def __init__(
@@ -232,11 +240,13 @@ class CardScorer:
         """
         Assign letter grade based on score.
 
+        Uses 17lands Z-score thresholds converted to 0-100 scale.
+
         Args:
             score: Composite score (0-100)
 
         Returns:
-            Letter grade (A+, A, B+, B, C+, C, D, F)
+            Letter grade (A+, A, A-, B+, B, B-, C+, C, C-, D+, D, D-, F)
         """
         for grade, threshold in self.GRADE_THRESHOLDS.items():
             if score >= threshold:

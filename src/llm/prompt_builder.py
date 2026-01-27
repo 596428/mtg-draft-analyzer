@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from src.data.set_metadata import get_set_mechanics
 from src.models.card import Card
 from src.models.meta import MetaSnapshot
 
@@ -28,7 +29,10 @@ Please provide analysis on:
 
 1. **Meta Summary**: What defines this draft format? Is it fast/slow? Synergy-driven or value-driven?
 
-2. **Color Assessment**: Which colors are strongest and why? Are there any colors to avoid?
+2. **🎨 Color Strategy (색상 전략)**:
+   - 강한 색상 2개와 **구체적 이유** (폭탄 강도, 깊이, 커먼 품질)
+   - 약한 색상과 피해야 할 상황
+   - **P1P1 색상 우선순위** (Pack 1 Pick 1에서 어떤 색상 카드를 우선해야 하는가)
 
 3. **Top Archetypes**: What makes the best archetypes successful? Key strategies for each.
 
@@ -86,6 +90,8 @@ FORMAT_OVERVIEW_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
 ⚠️ **중요**: 1위 아키타입의 메커니즘이 포맷 전체를 대표하지 않습니다.
 각 아키타입은 **독립적인 전략**을 가집니다. 분석 시 반드시 구분하세요.
 
+{set_mechanics}
+
 ## 포맷 데이터
 - 세트: {expansion} ({format})
 - 게임 수: {total_games:,}판
@@ -109,9 +115,11 @@ FORMAT_OVERVIEW_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
 ## 아키타입 분석 (상세)
 {archetype_details}
 
+{trophy_stats_section}
+
 ---
 
-## 출력 형식 (3개 섹션)
+## 출력 형식 (2개 섹션)
 
 ### 1. 📋 포맷 특성 (왜 이런 메타인가)
 - 이 포맷에서 **공존하는** 주요 전략들은? (예: 어그로, 미드레인지, 컨트롤)
@@ -123,15 +131,10 @@ FORMAT_OVERVIEW_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
 ### 2. 🏆 상위 아키타입 심층 분석
 ⚠️ 각 아키타입은 **독립적인 전략**을 가집니다. 1위의 전략 ≠ 포맷 전체 전략
 
-각 아키타입(상위 3개)마다:
+각 아키타입(상위 4개)마다:
 - 이 아키타입**만의** 고유 메커니즘 (다른 아키타입과 구별되는 점)
 - 핵심 시너지 카드 3장과 **왜 이 아키타입에서만 작동하는지**
 - 이 아키타입에서 피해야 할 카드 (다른 아키타입에서는 좋을 수 있음)
-
-### 3. 🎨 색상 전략
-- 강한 색상 2개와 **구체적 이유** (폭탄 강도, 깊이, 커먼 품질)
-- 약한 색상과 피해야 할 상황
-- P1P1 색상 우선순위
 
 ---
 
@@ -305,10 +308,18 @@ class PromptBuilder:
         # Format detailed archetype data
         archetype_details = self._format_archetype_details(snapshot.top_archetypes[:5])
 
+        # Get set mechanics if available
+        set_mechanics = get_set_mechanics(snapshot.expansion)
+
+        # Format trophy stats section if available
+        trophy_stats_section = self._format_trophy_stats(snapshot.trophy_stats)
+
         return self.format_overview_template.format(
             expansion=snapshot.expansion,
             format=snapshot.format,
             total_games=snapshot.total_games_analyzed,
+            set_mechanics=set_mechanics,
+            trophy_stats_section=trophy_stats_section,
             tempo_ratio=tempo_ratio,
             speed_label=speed_label,
             aggro_advantage=aggro_advantage,
@@ -337,6 +348,35 @@ class PromptBuilder:
 - 상위 커먼: {top_commons}
 - 상위 언커먼: {top_uncommons}""")
         return "\n\n".join(lines) if lines else "색상 데이터 없음"
+
+    def _format_trophy_stats(self, trophy_stats) -> str:
+        """Format trophy deck statistics for LLM prompt."""
+        if not trophy_stats:
+            return ""
+
+        lines = ["## 🏆 Trophy Deck 분석 (7승 덱 통계)"]
+        lines.append(f"- 총 Trophy Decks: {trophy_stats.total_trophy_decks}개")
+        lines.append(f"- 분석된 덱: {trophy_stats.analyzed_decks}개")
+
+        # Archetype trophy ranking
+        lines.append("\n### 아키타입별 Trophy 분포")
+        for arch in trophy_stats.get_archetype_ranking()[:5]:
+            share = trophy_stats.get_archetype_share(arch.colors)
+            top_cards = ", ".join([c for c, _ in arch.top_cards(3)])
+            lines.append(
+                f"- **{arch.guild_name} ({arch.colors})**: "
+                f"{arch.trophy_count}개 ({share:.1%}), "
+                f"핵심 카드: {top_cards}"
+            )
+
+        # Overall top cards in trophy decks
+        lines.append("\n### Trophy Deck 핵심 카드 (전체)")
+        top_overall = trophy_stats.get_top_cards_overall(10)
+        if top_overall:
+            card_list = ", ".join([f"{name}({count})" for name, count in top_overall])
+            lines.append(f"- {card_list}")
+
+        return "\n".join(lines)
 
     def _format_archetype_details(self, archetypes: list) -> str:
         """Format detailed archetype analysis with synergy and key cards."""

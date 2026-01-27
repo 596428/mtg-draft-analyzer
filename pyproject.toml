@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "requests>=2.31",
     "polars>=0.20",
-    "google-generativeai>=0.4",
+    "google-genai>=1.0",
     "jinja2>=3.1",
     "typer>=0.9",
     "python-dotenv>=1.0",

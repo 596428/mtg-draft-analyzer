@@ -2,10 +2,13 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from src.models.archetype import Archetype, ColorStrength
 from src.models.card import Card
+
+if TYPE_CHECKING:
+    from src.analysis.trophy_analyzer import TrophyStats
 
 
 @dataclass
@@ -179,10 +182,16 @@ class MetaSnapshot:
     format_speed: Optional[FormatSpeed] = None
     splash_indicator: Optional[SplashIndicator] = None
 
+    # Trophy deck statistics (optional)
+    trophy_stats: Optional["TrophyStats"] = None
+
     # LLM analysis (optional)
     llm_meta_analysis: Optional[str] = None
     llm_strategy_tips: Optional[str] = None
     llm_format_overview: Optional[str] = None
+    # Parsed sections from format_overview
+    llm_format_characteristics: Optional[str] = None  # 📋 포맷 특성
+    llm_archetype_deep_dive: Optional[str] = None     # 🏆 상위 아키타입 심층 분석
 
     @property
     def top_colors(self) -> list[ColorStrength]:
@@ -207,6 +216,30 @@ class MetaSnapshot:
         """Get all cards of a specific rarity."""
         return [c for c in self.all_cards if c.rarity.value == rarity.lower()]
 
+    def _trophy_stats_to_dict(self) -> Optional[dict]:
+        """Convert trophy stats to dictionary."""
+        if not self.trophy_stats:
+            return None
+
+        ts = self.trophy_stats
+        archetype_ranking = []
+        for arch in ts.get_archetype_ranking()[:10]:
+            archetype_ranking.append({
+                "colors": arch.colors,
+                "guild_name": arch.guild_name,
+                "trophy_count": arch.trophy_count,
+                "trophy_share": ts.get_archetype_share(arch.colors),
+                "avg_win_rate": arch.win_rate,
+                "top_cards": [card for card, count in arch.top_cards(5)],
+            })
+
+        return {
+            "total_trophy_decks": ts.total_trophy_decks,
+            "analyzed_decks": ts.analyzed_decks,
+            "archetype_ranking": archetype_ranking,
+            "top_cards_overall": [card for card, count in ts.get_top_cards_overall(15)],
+        }
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON export."""
         return {
@@ -221,6 +254,7 @@ class MetaSnapshot:
             "format_characteristics": {
                 "format_speed": self.format_speed.to_dict() if self.format_speed else None,
                 "splash_indicator": self.splash_indicator.to_dict() if self.splash_indicator else None,
+                "trophy_stats": self._trophy_stats_to_dict() if self.trophy_stats else None,
             },
             "color_rankings": [cs.to_dict() for cs in self.top_colors],
             "archetype_rankings": [a.to_dict() for a in self.top_archetypes[:10]],
@@ -232,6 +266,8 @@ class MetaSnapshot:
                 "meta_analysis": self.llm_meta_analysis,
                 "strategy_tips": self.llm_strategy_tips,
                 "format_overview": self.llm_format_overview,
+                "format_characteristics": self.llm_format_characteristics,
+                "archetype_deep_dive": self.llm_archetype_deep_dive,
             },
         }
 

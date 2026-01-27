@@ -4,7 +4,8 @@ import logging
 import os
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 from src.llm.prompt_builder import PromptBuilder
@@ -20,9 +21,9 @@ class GeminiClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-2.0-flash",
+        model: str = "gemini-3-flash-preview",
         max_tokens: int = 4096,
-        temperature: float = 0.7,
+        temperature: float = 1.0,
     ):
         """
         Initialize Gemini client.
@@ -31,7 +32,7 @@ class GeminiClient:
             api_key: Gemini API key (defaults to GEMINI_API_KEY env var)
             model: Model to use
             max_tokens: Maximum response tokens
-            temperature: Sampling temperature
+            temperature: Sampling temperature (Gemini 3 recommends 1.0)
         """
         load_dotenv()
 
@@ -48,9 +49,8 @@ class GeminiClient:
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-        # Configure API
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(model)
+        # Configure API client (Gemini 3 style)
+        self.client = genai.Client(api_key=self.api_key)
         self.prompt_builder = PromptBuilder()
 
     def _generate(self, prompt: str) -> Optional[str]:
@@ -68,14 +68,15 @@ class GeminiClient:
             return None
 
         try:
-            generation_config = genai.GenerationConfig(
+            config = types.GenerateContentConfig(
                 max_output_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
 
-            response = self.model.generate_content(
-                prompt,
-                generation_config=generation_config,
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=config,
             )
 
             if response and response.text:
@@ -157,6 +158,42 @@ class GeminiClient:
 
         return self._generate(prompt)
 
+    def _parse_format_overview_sections(self, text: str) -> tuple[Optional[str], Optional[str]]:
+        """
+        Parse format_overview into two sections.
+
+        Returns:
+            Tuple of (format_characteristics, archetype_deep_dive)
+        """
+        if not text:
+            return None, None
+
+        format_characteristics = None
+        archetype_deep_dive = None
+
+        # Split by section headers
+        lines = text.split('\n')
+        current_section = None
+        section_lines = {"format": [], "archetype": []}
+
+        for line in lines:
+            # Detect section headers
+            if '📋' in line or ('1.' in line and '포맷' in line):
+                current_section = "format"
+                section_lines["format"].append(line)
+            elif '🏆' in line or ('2.' in line and '아키타입' in line):
+                current_section = "archetype"
+                section_lines["archetype"].append(line)
+            elif current_section:
+                section_lines[current_section].append(line)
+
+        if section_lines["format"]:
+            format_characteristics = '\n'.join(section_lines["format"]).strip()
+        if section_lines["archetype"]:
+            archetype_deep_dive = '\n'.join(section_lines["archetype"]).strip()
+
+        return format_characteristics, archetype_deep_dive
+
     def enrich_snapshot(
         self,
         snapshot: MetaSnapshot,
@@ -187,6 +224,11 @@ class GeminiClient:
             snapshot.llm_strategy_tips = self.get_strategy_tips(snapshot)
 
         if include_format_overview:
-            snapshot.llm_format_overview = self.generate_format_overview(snapshot)
+            overview = self.generate_format_overview(snapshot)
+            snapshot.llm_format_overview = overview
+            # Parse into separate sections
+            format_char, arch_deep = self._parse_format_overview_sections(overview)
+            snapshot.llm_format_characteristics = format_char
+            snapshot.llm_archetype_deep_dive = arch_deep
 
         return snapshot

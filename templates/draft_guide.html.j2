@@ -36,7 +36,7 @@
             --mtg-red: #d3202a;
             --mtg-green: #00733e;
 
-            /* Grade colors */
+            /* Grade colors (17lands-style 13 grades) */
             --grade-aplus: #ffd700;
             --grade-a: #3fb950;
             --grade-aminus: #7ee787;
@@ -46,7 +46,9 @@
             --grade-cplus: #d29922;
             --grade-c: #e3b341;
             --grade-cminus: #f0c14b;
+            --grade-dplus: #e5863a;
             --grade-d: #db6d28;
+            --grade-dminus: #d45638;
             --grade-f: #f85149;
 
             /* Responsive card widths */
@@ -968,7 +970,9 @@
         .grade-cplus { background: var(--grade-cplus); color: #000; }
         .grade-c { background: var(--grade-c); color: #000; }
         .grade-cminus { background: var(--grade-cminus); color: #000; }
+        .grade-dplus { background: var(--grade-dplus); color: #fff; }
         .grade-d { background: var(--grade-d); color: #fff; }
+        .grade-dminus { background: var(--grade-dminus); color: #fff; }
         .grade-f { background: var(--grade-f); color: #fff; }
 
         .win-rate {
@@ -1906,16 +1910,25 @@
                 {% endif %}
             </div>
 
-            {% if llm_format_overview or llm_analysis %}
+            {% if llm_format_characteristics or llm_analysis or llm_archetype_deep_dive %}
             <div class="format-analysis">
                 <h3>🤖 AI Analysis</h3>
                 <div class="analysis-content">
-                    {% if llm_format_overview %}
-                    {{ llm_format_overview | markdown }}
+                    {# 1. 📋 포맷 특성 (왜 이런 메타인가) #}
+                    {% if llm_format_characteristics %}
+                    {{ llm_format_characteristics | markdown }}
                     {% endif %}
+
+                    {# 2. ECL PremierDraft 메타 분석 (Meta Summary + 🎨 Color Strategy + Top Archetypes) #}
                     {% if llm_analysis %}
                     <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
                     {{ llm_analysis | markdown }}
+                    {% endif %}
+
+                    {# 3. 🏆 상위 아키타입 심층 분석 #}
+                    {% if llm_archetype_deep_dive %}
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+                    {{ llm_archetype_deep_dive | markdown }}
                     {% endif %}
                 </div>
             </div>

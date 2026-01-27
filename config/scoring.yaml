@@ -56,23 +56,47 @@ color_strength:
     min: 0.80                 # Synergy-dependent cards weighted at 80%
     max: 1.00                 # Stable cards weighted at 100%
 
-# Grade Assignment
+# Grade Assignment (17lands Z-score thresholds)
+# Reference: https://github.com/bstaple1/MTGA_Draft_17Lands GRADE_DEVIATION_DICT
+# Formula: score = 50 + z * 15
 grades:
+  # Z-score thresholds for reference
+  z_thresholds:
+    A_plus: 2.00    # Top tier bombs
+    A: 1.67
+    A_minus: 1.33
+    B_plus: 1.00    # Very good playables
+    B: 0.67
+    B_minus: 0.33
+    C_plus: 0.00    # Average playables
+    C: -0.33
+    C_minus: -0.67
+    D_plus: -1.00   # Below average
+    D: -1.33
+    D_minus: -1.67
+    F: -2.00        # Unplayables
+
+  # Converted to 0-100 scale
   thresholds:
-    A_plus: 90
-    A: 80
-    B_plus: 70
+    A_plus: 80
+    A: 75
+    A_minus: 70
+    B_plus: 65
     B: 60
+    B_minus: 55
     C_plus: 50
-    C: 40
+    C: 45
+    C_minus: 40
+    D_plus: 35
     D: 30
+    D_minus: 25
     F: 0
 
 # LLM Configuration
 llm:
-  model: "gemini-2.0-flash"
+  model: "gemini-3-pro-preview"
   max_tokens: 4096
-  temperature: 0.7
+  temperature: 1.0
 
   # Analysis prompts
   prompts:

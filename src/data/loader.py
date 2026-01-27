@@ -59,6 +59,8 @@ class SeventeenLandsLoader:
     CARD_RATINGS_ENDPOINT = "/card_ratings/data"
     COLOR_RATINGS_ENDPOINT = "/color_ratings/data"
     PLAY_DRAW_ENDPOINT = "/data/play_draw"
+    TROPHIES_ENDPOINT = "/data/trophies"
+    DECK_ENDPOINT = "/data/deck"
 
     def __init__(
         self,
@@ -373,4 +375,98 @@ class SeventeenLandsLoader:
 
         except Exception as e:
             logger.warning(f"play_draw API unavailable: {e}")
+            return None
+
+    def fetch_trophy_decks(
+        self,
+        expansion: str,
+        format: str = "PremierDraft",
+        use_cache: bool = True,
+    ) -> list[dict]:
+        """
+        Fetch list of 7-win trophy decks from 17lands.
+
+        Args:
+            expansion: Set code (e.g., "ECL", "DSK")
+            format: Draft format (PremierDraft, QuickDraft, TradDraft)
+            use_cache: Whether to use cached data
+
+        Returns:
+            List of trophy deck metadata dicts with keys:
+            - aggregate_id: Unique draft ID for fetching deck details
+            - deck_index: Index of the deck in the draft
+            - colors: Color identity (e.g., "WU")
+            - wins: Number of wins
+            - losses: Number of losses
+            - time: Timestamp
+        """
+        cache_key = ("trophy_decks", expansion, format)
+
+        if use_cache:
+            cached = self.cache.get(*cache_key)
+            if cached:
+                logger.info(f"Using cached trophy decks for {expansion} {format}")
+                return cached
+
+        logger.info(f"Fetching trophy decks for {expansion} {format}")
+        params = {
+            "expansion": expansion,
+            "format": format,
+        }
+
+        try:
+            raw_data = self._make_request(self.TROPHIES_ENDPOINT, params)
+
+            if use_cache:
+                self.cache.set(raw_data, *cache_key)
+
+            logger.info(f"Loaded {len(raw_data)} trophy decks for {expansion} {format}")
+            return raw_data
+
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f"Trophy decks API unavailable for {expansion}: {e}")
+            return []
+
+    def fetch_deck_details(
+        self,
+        aggregate_id: str,
+        deck_index: int = 0,
+        use_cache: bool = True,
+    ) -> Optional[dict]:
+        """
+        Fetch the 40-card deck list for a specific draft.
+
+        Args:
+            aggregate_id: Unique draft ID from trophy deck list
+            deck_index: Index of the deck in the draft (usually 0)
+            use_cache: Whether to use cached data
+
+        Returns:
+            Dict with deck details:
+            - groups: List of card groups (Maindeck, Sideboard)
+              - groups[0]['cards']: List of card IDs in maindeck (40 cards)
+            - cards: Dict mapping card ID to card info (name, colors, etc.)
+        """
+        cache_key = ("deck_details", aggregate_id, deck_index)
+
+        if use_cache:
+            cached = self.cache.get(*cache_key)
+            if cached:
+                return cached
+
+        params = {
+            "draft_id": aggregate_id,
+            "deck_index": deck_index,
+        }
+
+        try:
+            raw_data = self._make_request(self.DECK_ENDPOINT, params)
+
+            if use_cache:
+                self.cache.set(raw_data, *cache_key)
+
+            return raw_data
+
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f"Deck details API unavailable for {aggregate_id}: {e}")
             return None

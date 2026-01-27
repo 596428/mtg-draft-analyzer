@@ -150,8 +150,8 @@ class HtmlReportGenerator:
 </html>"""
 
     def _prepare_cards_by_grade(self, cards: list[Card]) -> dict[str, list[Card]]:
-        """Group cards by grade for tier display."""
-        grades = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"]
+        """Group cards by grade for tier display (13 grades)."""
+        grades = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"]
         result = {g: [] for g in grades}
 
         for card in cards:
@@ -305,13 +305,16 @@ class HtmlReportGenerator:
             "sleepers": snapshot.sleeper_cards[:10],
             "traps": snapshot.trap_cards[:10],
 
-            # Grade display
-            "grade_order": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"],
+            # Grade display (17lands-style 13 grades)
+            "grade_order": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"],
 
             # LLM analysis (optional)
             "llm_analysis": snapshot.llm_meta_analysis if include_llm else None,
             "llm_strategy": snapshot.llm_strategy_tips if include_llm else None,
             "llm_format_overview": snapshot.llm_format_overview if include_llm else None,
+            # Parsed sections for reordering
+            "llm_format_characteristics": snapshot.llm_format_characteristics if include_llm else None,
+            "llm_archetype_deep_dive": snapshot.llm_archetype_deep_dive if include_llm else None,
         }
 
         return template.render(**context)

@@ -1791,6 +1791,180 @@
             font-weight: 600;
         }
 
+        /* Trophy Analysis Styles */
+        .tier-trophy {
+            font-size: 0.9rem;
+        }
+
+        .trophy-share {
+            color: var(--accent-yellow);
+            font-weight: 600;
+        }
+
+        .trophy-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(210, 153, 34, 0.15);
+            border: 1px solid var(--accent-yellow);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: var(--accent-yellow);
+        }
+
+        .trophy-section {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+        }
+
+        .trophy-section h4 {
+            margin: 0 0 12px 0;
+            color: var(--accent-yellow);
+            font-size: 1rem;
+        }
+
+        /* Combined stats row - metrics + mana curve inline */
+        .trophy-stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+
+        .trophy-metrics-compact {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .trophy-metric {
+            display: flex;
+            flex-direction: column;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            min-width: 80px;
+        }
+
+        .trophy-metric .metric-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .trophy-metric .metric-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Inline CMC curve */
+        .cmc-curve-inline {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 50px;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border-radius: 4px;
+        }
+
+        .cmc-curve-inline .cmc-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            align-self: center;
+            margin-right: 6px;
+        }
+
+        .cmc-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 22px;
+        }
+
+        .cmc-bar-fill {
+            width: 16px;
+            background: var(--accent-blue);
+            border-radius: 2px 2px 0 0;
+            min-height: 3px;
+        }
+
+        .cmc-bar-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .cmc-bar-count {
+            font-size: 0.6rem;
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .trophy-cards-group {
+            margin-top: 12px;
+        }
+
+        .trophy-cards-group h5 {
+            margin: 0 0 8px 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .trophy-card-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .trophy-card-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .trophy-card-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-yellow);
+        }
+
+        .trophy-card-item .card-pct {
+            color: var(--accent-yellow);
+            font-size: 0.7rem;
+        }
+
+        /* Card hover preview popup */
+        .trophy-card-preview {
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            max-width: 200px;
+            transform: translate(-50%, -110%);
+        }
+
+        .trophy-card-preview img {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+        }
+
     </style>
 </head>
 <body>
@@ -1964,6 +2138,7 @@
                         <th>Archetype</th>
                         <th>Win Rate</th>
                         <th>Meta Share</th>
+                        {% if trophy_stats %}<th>🏆 7승 점유율</th>{% endif %}
                         <th>Best Splash Variant</th>
                     </tr>
                 </thead>
@@ -1979,6 +2154,16 @@
                         </td>
                         <td class="tier-wr">{{ arch.win_rate | percent2 }}</td>
                         <td class="tier-meta">{{ arch.meta_share | percent }}</td>
+                        {% if trophy_stats %}
+                        <td class="tier-trophy">
+                            {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                            {% if trophy_arch %}
+                                <span class="trophy-share">{{ ((trophy_arch.trophy_count / trophy_stats.analyzed_decks) * 100) | round(1) }}%</span>
+                            {% else %}
+                                <span style="color: var(--text-muted);">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
                         <td class="tier-splash">
                             {% if arch.variants and arch.variants|length > 0 %}
                                 {% set best_variant = arch.variants[0] %}
@@ -2071,6 +2256,15 @@
                                 <div class="label">Meta Share</div>
                                 <div class="value">{{ arch.meta_share | percent }}</div>
                             </div>
+                            {% if trophy_stats %}
+                            {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                            {% if trophy_arch %}
+                            <div class="arch-stat">
+                                <div class="label">🏆 7승 점유율</div>
+                                <div class="value trophy-share">{{ ((trophy_arch.trophy_count / trophy_stats.analyzed_decks) * 100) | round(1) }}%</div>
+                            </div>
+                            {% endif %}
+                            {% endif %}
                         </div>
                     </div>
 
@@ -2229,6 +2423,98 @@
                         {% endif %}
                         {% endfor %}
                     </div>
+                    {% endif %}
+
+                    {# Trophy Analysis Section #}
+                    {% if trophy_stats %}
+                    {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                    {% if trophy_arch and trophy_arch.trophy_count > 0 %}
+                    <div class="trophy-section">
+                        <h4>🏆 7승 덱 분석 ({{ trophy_arch.trophy_count }}개)</h4>
+
+                        {# Combined metrics + CMC curve in single row #}
+                        <div class="trophy-stats-row">
+                            <div class="trophy-metrics-compact">
+                                <div class="trophy-metric">
+                                    <span class="metric-label">평균 CMC</span>
+                                    <span class="metric-value">{{ trophy_arch.avg_cmc | round(2) }}</span>
+                                </div>
+                                <div class="trophy-metric">
+                                    <span class="metric-label">생물 카드 평균</span>
+                                    <span class="metric-value">{{ trophy_arch.avg_creature_count | round(1) }}장</span>
+                                </div>
+                                {% if trophy_arch.splash_rate %}
+                                <div class="trophy-metric">
+                                    <span class="metric-label">스플래시</span>
+                                    <span class="metric-value">{{ (trophy_arch.splash_rate * 100) | round }}%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {# CMC Distribution Bar Chart - inline #}
+                            {% if trophy_arch.cmc_distribution %}
+                            <div class="cmc-curve-inline">
+                                <span class="cmc-label">Mana Curve:</span>
+                                {% set cmc_values = [trophy_arch.cmc_distribution.get('1', 0), trophy_arch.cmc_distribution.get('2', 0), trophy_arch.cmc_distribution.get('3', 0), trophy_arch.cmc_distribution.get('4', 0), trophy_arch.cmc_distribution.get('5', 0), trophy_arch.cmc_distribution.get('6+', 0)] %}
+                                {% set max_cmc = cmc_values | max %}
+                                {% set total_cmc = cmc_values | sum %}
+                                {% for cmc_label in ['1', '2', '3', '4', '5', '6+'] %}
+                                {% set cmc_count = trophy_arch.cmc_distribution.get(cmc_label, 0) %}
+                                {% set avg_cards = ((cmc_count / total_cmc) * 23) | round(1) if total_cmc > 0 else 0 %}
+                                <div class="cmc-bar">
+                                    <div class="cmc-bar-fill" style="height: {{ ((cmc_count / max_cmc) * 35) if max_cmc > 0 else 3 }}px;"></div>
+                                    <span class="cmc-bar-label">{{ cmc_label }}</span>
+                                    <span class="cmc-bar-count">{{ avg_cards }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {# Top Cards by Rarity with hover support #}
+                        <div class="trophy-cards-group">
+                            <h5>Mythic / Rare (Top 5)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('mythic', 'rare', n=5) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="trophy-cards-group">
+                            <h5>Uncommon (Top 7)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('uncommon', n=7) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="trophy-cards-group">
+                            <h5>Common (Top 7)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('common', n=7) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -2678,6 +2964,75 @@
                 el.style.setProperty('--card-image', `url(${imageUrl})`);
             }
         });
+
+        // ==========================================
+        // Trophy Card Hover Preview
+        // ==========================================
+        (function() {
+            // Create preview element
+            const preview = document.createElement('img');
+            preview.className = 'trophy-card-preview';
+            preview.style.display = 'none';
+            document.body.appendChild(preview);
+
+            // Cache for loaded images to avoid flickering
+            const imageCache = new Set();
+
+            function showPreview(e) {
+                const imageUrl = e.target.dataset.cardImage;
+                if (!imageUrl) return;
+
+                // Preload image if not cached
+                if (!imageCache.has(imageUrl)) {
+                    const img = new Image();
+                    img.src = imageUrl;
+                    imageCache.add(imageUrl);
+                }
+
+                preview.src = imageUrl;
+                preview.style.display = 'block';
+                positionPreview(e);
+            }
+
+            function hidePreview() {
+                preview.style.display = 'none';
+            }
+
+            function positionPreview(e) {
+                const rect = e.target.getBoundingClientRect();
+                const previewWidth = 200;
+                const previewHeight = 280;
+
+                // Position above the element, centered
+                let left = rect.left + (rect.width / 2);
+                let top = rect.top - 10;
+
+                // Adjust if too close to viewport edges
+                if (left - previewWidth / 2 < 10) {
+                    left = previewWidth / 2 + 10;
+                }
+                if (left + previewWidth / 2 > window.innerWidth - 10) {
+                    left = window.innerWidth - previewWidth / 2 - 10;
+                }
+                if (top - previewHeight < 10) {
+                    // Show below instead
+                    top = rect.bottom + previewHeight + 10;
+                    preview.style.transform = 'translate(-50%, 0)';
+                } else {
+                    preview.style.transform = 'translate(-50%, -100%)';
+                }
+
+                preview.style.left = left + 'px';
+                preview.style.top = top + 'px';
+            }
+
+            // Attach event listeners to trophy card hover elements
+            document.querySelectorAll('.trophy-card-hover').forEach(el => {
+                el.addEventListener('mouseenter', showPreview);
+                el.addEventListener('mouseleave', hidePreview);
+                el.addEventListener('mousemove', positionPreview);
+            });
+        })();
     </script>
 </body>
 </html>

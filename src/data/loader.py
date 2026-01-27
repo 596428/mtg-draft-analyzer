@@ -436,17 +436,28 @@ class SeventeenLandsLoader:
         """
         Fetch the 40-card deck list for a specific draft.
 
+        DEPRECATED: As of January 2025, this method should not be used.
+        Fetching individual deck details causes excessive API calls (500+ per analysis)
+        and frequently results in 403 Forbidden errors.
+
+        Use archetype_ratings API for card usage data instead.
+
         Args:
             aggregate_id: Unique draft ID from trophy deck list
             deck_index: Index of the deck in the draft (usually 0)
             use_cache: Whether to use cached data
 
         Returns:
-            Dict with deck details:
-            - groups: List of card groups (Maindeck, Sideboard)
-              - groups[0]['cards']: List of card IDs in maindeck (40 cards)
-            - cards: Dict mapping card ID to card info (name, colors, etc.)
+            Dict with deck details or None
         """
+        import warnings
+        warnings.warn(
+            "fetch_deck_details is deprecated and will be removed in a future version. "
+            "Use archetype_ratings API for card usage data instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         cache_key = ("deck_details", aggregate_id, deck_index)
 
         if use_cache:

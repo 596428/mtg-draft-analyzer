@@ -18,6 +18,7 @@ from src.scoring.irregularity import (
     IrregularityDetector,
     enrich_cards_with_variance,
 )
+from src.analysis.trophy_analyzer import TrophyAnalyzer, TrophyStats
 
 logger = logging.getLogger(__name__)
 
@@ -635,6 +636,8 @@ class MetaAnalyzer:
         expansion: str,
         format: str = "PremierDraft",
         include_llm: bool = True,
+        include_trophy: bool = True,
+        refresh_trophy: bool = False,
         progress_callback: Optional[callable] = None,
     ) -> MetaSnapshot:
         """
@@ -644,13 +647,19 @@ class MetaAnalyzer:
             expansion: Set code (e.g., "FDN", "DSK")
             format: Draft format (PremierDraft, QuickDraft)
             include_llm: Whether to include LLM analysis
+            include_trophy: Whether to include trophy deck analysis (default ON)
+            refresh_trophy: Whether to force refresh trophy cache
             progress_callback: Optional callback(step, total, message)
 
         Returns:
             Complete MetaSnapshot
         """
-        # Scryfall enrichment is always enabled
-        total_steps = 9 if include_llm else 8
+        # Calculate total steps based on enabled features
+        total_steps = 8  # Base steps
+        if include_trophy:
+            total_steps += 1
+        if include_llm:
+            total_steps += 1
 
         def report_progress(step: int, message: str):
             if progress_callback:
@@ -749,9 +758,21 @@ class MetaAnalyzer:
             color_pairs, # Use all pairs for color calculation
         )
 
-        # Step 9: LLM enrichment (optional)
+        # Dynamic step numbering for optional steps
+        current_step = 8
+
+        # Step 9: Trophy deck analysis (optional)
+        if include_trophy:
+            current_step += 1
+            report_progress(current_step, "Analyzing trophy decks")
+            snapshot.trophy_stats = self._analyze_trophy_decks(
+                expansion, format, refresh_trophy, archetype_ratings=archetype_data
+            )
+
+        # Step 10: LLM enrichment (optional)
         if include_llm and self.gemini_client:
-            report_progress(9, "Generating LLM analysis")
+            current_step += 1
+            report_progress(current_step, "Generating LLM analysis")
             snapshot = self.gemini_client.enrich_snapshot(snapshot)
 
         logger.info(
@@ -760,6 +781,51 @@ class MetaAnalyzer:
         )
 
         return snapshot
+
+    def _analyze_trophy_decks(
+        self,
+        expansion: str,
+        format: str,
+        force_refresh: bool = False,
+        archetype_ratings: Optional[dict[str, list[dict]]] = None,
+    ) -> Optional[TrophyStats]:
+        """Analyze trophy decks with caching support (metadata only).
+
+        NOTE: As of January 2025, this no longer fetches individual deck details.
+        Trophy analysis uses only metadata from the trophy list endpoint.
+        Card usage is populated from archetype_ratings.
+
+        Args:
+            expansion: Set code
+            format: Draft format
+            force_refresh: Whether to ignore cache and fetch fresh data
+            archetype_ratings: Optional archetype ratings for card usage data
+
+        Returns:
+            TrophyStats or None on failure
+        """
+        try:
+            # Check cache first (unless force refresh)
+            if not force_refresh:
+                cached = TrophyAnalyzer.load_from_cache(expansion, format)
+                if cached:
+                    logger.info(f"Using cached trophy analysis for {expansion}")
+                    return cached
+
+            # Fetch fresh data (metadata only - no individual deck fetching)
+            logger.info(f"Fetching trophy decks for {expansion} (metadata only)")
+            analyzer = TrophyAnalyzer(loader=self.loader, max_decks=500)
+            stats = analyzer.analyze(expansion, format, archetype_ratings=archetype_ratings)
+
+            # Cache the results
+            if stats.analyzed_decks > 0:
+                analyzer.save_to_cache(stats)
+
+            return stats
+
+        except Exception as e:
+            logger.warning(f"Trophy analysis failed: {e}")
+            return None
 
     def _enrich_with_scryfall(
         self,

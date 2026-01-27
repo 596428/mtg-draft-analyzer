@@ -142,6 +142,127 @@ FORMAT_OVERVIEW_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
 '''
 
 
+FORMAT_CHARACTERISTICS_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
+다음 데이터를 분석하여 **포맷 특성**에 대한 심층 인사이트를 제공해주세요.
+
+## 핵심 질문 (반드시 답변)
+1. 이 포맷의 **속도**는? (데이터 기반 근거 제시)
+2. 각 색상의 **강점/약점**은? (단순히 "강하다"가 아니라 구체적 이유)
+3. 스플래시가 **언제 적합한가**?
+
+⚠️ **중요**: 데이터에 없는 내용은 추측하지 마세요.
+세트 메커니즘은 참고용으로만 사용하고, 카드 수/레어도에 비례하여 언급하세요.
+
+{set_mechanics}
+
+## 포맷 데이터
+- 세트: {expansion} ({format})
+- 게임 수: {total_games:,}판
+
+## 포맷 속도
+- Tempo Ratio: {tempo_ratio:.3f} (OH WR / GD WR)
+- Speed: {speed_label}
+- Aggro Advantage: {aggro_advantage:.3f}
+- Low CMC WR (≤2): {low_cmc_wr:.2%} vs High CMC WR (≥5): {high_cmc_wr:.2%}
+- 갈등 감지: {conflicts}
+
+## 스플래시 분석
+- Splash Viability: {splash_label}
+- Dual Land Count: {dual_land_count}장
+- Dual Land ALSA: {dual_land_alsa:.1f}
+- Fixer WR Premium: {fixer_wr_premium:.2%}
+
+## 색상 분석 (상세)
+{color_details}
+
+---
+
+## 출력 형식: 📋 포맷 특성 (왜 이런 메타인가)
+
+다음 내용을 포함해주세요:
+
+### 1. 포맷 속도 분석
+- 데이터 기반으로 속도 해석 (aggro vs control)
+- tempo_ratio, CMC별 승률의 실전적 의미
+- 속도 갈등이 있다면 그 해석
+
+### 2. 색상별 전략 요약
+- 각 색상의 강점과 약점 (데이터 기반)
+- P1P1(Pack 1 Pick 1)에서 색상 우선순위
+- 피해야 할 색상 조합
+
+### 3. 스플래시 가이드
+- 스플래시가 적합한 상황
+- 듀얼 랜드/픽서 우선순위
+- 스플래시 리스크
+
+### 4. 다른 세트와의 차별점
+- 이 세트만의 독특한 특징
+- 드래프트 시 유의사항
+
+---
+
+한글로 작성하세요 (카드명/색상 약어/아키타입명은 영문 유지).
+'''
+
+
+ARCHETYPE_DEEP_DIVE_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
+다음 데이터를 분석하여 **상위 아키타입**에 대한 심층 분석을 제공해주세요.
+
+## 핵심 질문 (반드시 답변)
+1. **왜** 이 아키타입이 강한가? (단순히 "강하다"가 아니라 메커니즘 설명)
+2. 각 아키타입은 **서로 다른 전략**을 사용하는가?
+3. 각 아키타입의 **핵심 시너지**는?
+
+⚠️ **중요**: 각 아키타입은 **독립적인 전략**을 가집니다.
+1위 아키타입의 전략이 포맷 전체를 대표하지 않습니다.
+
+{set_mechanics}
+
+## 포맷 데이터
+- 세트: {expansion} ({format})
+- 게임 수: {total_games:,}판
+
+## 아키타입 분석 (상세)
+{archetype_details}
+
+{trophy_stats_section}
+
+---
+
+## 출력 형식: 🏆 상위 아키타입 심층 분석
+
+⚠️ 각 아키타입은 **독립적인 전략**을 가집니다. 1위의 전략 ≠ 포맷 전체 전략
+
+각 아키타입(상위 4개)마다 다음을 작성해주세요:
+
+### [아키타입명] (색상) - Rank #N
+
+#### 1. 아키타입 정체성
+- 이 아키타입**만의** 고유 메커니즘 (다른 아키타입과 구별되는 점)
+- 승리 조건 (어떻게 게임을 이기는가)
+- 속도 프로필 (aggro/midrange/control)
+
+#### 2. 핵심 시너지 카드 3장
+- 각 카드가 **왜 이 아키타입에서만 작동하는지** 설명
+- 다른 아키타입에서의 성능과 비교
+
+#### 3. 드래프트 우선순위
+- 초기 픽에서 노려야 할 카드
+- 후반 픽에서 줍기 좋은 카드
+- 이 아키타입에서 피해야 할 카드 (다른 아키타입에서는 좋을 수 있음)
+
+#### 4. 플레이 패턴
+- 마나 커브 구성
+- 멀리건 기준
+- 사이드보딩 고려사항
+
+---
+
+한글로 작성하세요 (카드명/색상 약어/아키타입명은 영문 유지).
+'''
+
+
 STRATEGY_TIPS_PROMPT = '''Based on this meta data for {expansion} {format}, provide 5-7 concise, actionable draft tips:
 
 **Top Colors**: {top_colors}
@@ -165,6 +286,8 @@ class PromptBuilder:
         card_template: Optional[str] = None,
         strategy_template: Optional[str] = None,
         format_overview_template: Optional[str] = None,
+        format_characteristics_template: Optional[str] = None,
+        archetype_deep_dive_template: Optional[str] = None,
     ):
         """
         Initialize prompt builder.
@@ -174,11 +297,15 @@ class PromptBuilder:
             card_template: Custom card analysis template
             strategy_template: Custom strategy tips template
             format_overview_template: Custom format overview template
+            format_characteristics_template: Custom format characteristics template
+            archetype_deep_dive_template: Custom archetype deep dive template
         """
         self.meta_template = meta_template or META_ANALYSIS_PROMPT
         self.card_template = card_template or CARD_ANALYSIS_PROMPT
         self.strategy_template = strategy_template or STRATEGY_TIPS_PROMPT
         self.format_overview_template = format_overview_template or FORMAT_OVERVIEW_PROMPT
+        self.format_characteristics_template = format_characteristics_template or FORMAT_CHARACTERISTICS_PROMPT
+        self.archetype_deep_dive_template = archetype_deep_dive_template or ARCHETYPE_DEEP_DIVE_PROMPT
 
     def build_meta_prompt(self, snapshot: MetaSnapshot) -> str:
         """Build meta analysis prompt from snapshot."""
@@ -334,6 +461,76 @@ class PromptBuilder:
             archetype_details=archetype_details,
         )
 
+    def build_format_characteristics_prompt(self, snapshot: MetaSnapshot) -> str:
+        """Build format characteristics prompt (section 1 only).
+
+        This generates the "📋 포맷 특성" section independently to avoid
+        token truncation issues.
+        """
+        # Format speed data (with defaults for missing data)
+        fs = snapshot.format_speed
+        tempo_ratio = fs.tempo_ratio if fs else 1.0
+        speed_label = fs.speed_label if fs else "보통"
+        aggro_advantage = fs.aggro_advantage if fs else 0.0
+        low_cmc_wr = fs.low_cmc_wr if fs else 0.5
+        high_cmc_wr = fs.high_cmc_wr if fs else 0.5
+        conflicts = ", ".join(fs.conflicts) if fs and fs.conflicts else "없음"
+
+        # Splash indicator data (with defaults)
+        si = snapshot.splash_indicator
+        splash_label = si.splash_label if si else "보통"
+        dual_land_count = si.dual_land_count if si else 0
+        dual_land_alsa = si.dual_land_alsa if si else 7.0
+        fixer_wr_premium = si.fixer_wr_premium if si else 0.0
+
+        # Format detailed color data
+        color_details = self._format_color_details(snapshot.top_colors)
+
+        # Get set mechanics if available
+        set_mechanics = get_set_mechanics(snapshot.expansion)
+
+        return self.format_characteristics_template.format(
+            expansion=snapshot.expansion,
+            format=snapshot.format,
+            total_games=snapshot.total_games_analyzed,
+            set_mechanics=set_mechanics,
+            tempo_ratio=tempo_ratio,
+            speed_label=speed_label,
+            aggro_advantage=aggro_advantage,
+            low_cmc_wr=low_cmc_wr,
+            high_cmc_wr=high_cmc_wr,
+            conflicts=conflicts,
+            splash_label=splash_label,
+            dual_land_count=dual_land_count,
+            dual_land_alsa=dual_land_alsa,
+            fixer_wr_premium=fixer_wr_premium,
+            color_details=color_details,
+        )
+
+    def build_archetype_deep_dive_prompt(self, snapshot: MetaSnapshot) -> str:
+        """Build archetype deep dive prompt (section 2 only).
+
+        This generates the "🏆 상위 아키타입 심층 분석" section independently
+        to avoid token truncation issues.
+        """
+        # Format detailed archetype data
+        archetype_details = self._format_archetype_details(snapshot.top_archetypes[:5])
+
+        # Get set mechanics if available
+        set_mechanics = get_set_mechanics(snapshot.expansion)
+
+        # Format trophy stats section if available
+        trophy_stats_section = self._format_trophy_stats(snapshot.trophy_stats)
+
+        return self.archetype_deep_dive_template.format(
+            expansion=snapshot.expansion,
+            format=snapshot.format,
+            total_games=snapshot.total_games_analyzed,
+            set_mechanics=set_mechanics,
+            archetype_details=archetype_details,
+            trophy_stats_section=trophy_stats_section,
+        )
+
     def _format_color_details(self, colors: list) -> str:
         """Format detailed color analysis with bomb_factor, depth, and top cards."""
         lines = []
@@ -350,7 +547,7 @@ class PromptBuilder:
         return "\n\n".join(lines) if lines else "색상 데이터 없음"
 
     def _format_trophy_stats(self, trophy_stats) -> str:
-        """Format trophy deck statistics for LLM prompt."""
+        """Format trophy deck statistics for LLM prompt with expanded analysis."""
         if not trophy_stats:
             return ""
 
@@ -358,16 +555,44 @@ class PromptBuilder:
         lines.append(f"- 총 Trophy Decks: {trophy_stats.total_trophy_decks}개")
         lines.append(f"- 분석된 덱: {trophy_stats.analyzed_decks}개")
 
-        # Archetype trophy ranking
-        lines.append("\n### 아키타입별 Trophy 분포")
+        # Archetype trophy ranking with expanded stats
+        lines.append("\n### 아키타입별 Trophy 분포 + 덱 특성")
         for arch in trophy_stats.get_archetype_ranking()[:5]:
             share = trophy_stats.get_archetype_share(arch.colors)
-            top_cards = ", ".join([c for c, _ in arch.top_cards(3)])
+
+            # Build stats string with CMC, creature ratio, splash rate
+            stats_parts = []
+            if hasattr(arch, 'avg_cmc') and arch.avg_cmc:
+                stats_parts.append(f"CMC {arch.avg_cmc:.1f}")
+            if hasattr(arch, 'creature_ratio') and arch.creature_ratio:
+                stats_parts.append(f"생물 {arch.creature_ratio * 100:.0f}%")
+            if hasattr(arch, 'splash_rate') and arch.splash_rate:
+                stats_parts.append(f"스플래시 {arch.splash_rate * 100:.0f}%")
+            stats_str = " | ".join(stats_parts) if stats_parts else ""
+
+            # Get top cards (basic lands excluded)
+            if hasattr(arch, 'top_cards_nonland'):
+                top_cards = ", ".join([c["name"] for c in arch.top_cards_nonland(3)])
+            else:
+                top_cards = ", ".join([c for c, _ in arch.top_cards(3)])
+
             lines.append(
                 f"- **{arch.guild_name} ({arch.colors})**: "
-                f"{arch.trophy_count}개 ({share:.1%}), "
-                f"핵심 카드: {top_cards}"
+                f"{arch.trophy_count}개 ({share:.1%})"
             )
+            if stats_str:
+                lines.append(f"  {stats_str}")
+            lines.append(f"  핵심: {top_cards}")
+
+        # Uncommon/Common key cards per archetype (crucial for draft priority)
+        lines.append("\n### 7승 덱 핵심 Uncommon/Common (드래프트 우선순위)")
+        for arch in trophy_stats.get_archetype_ranking()[:3]:
+            if hasattr(arch, 'top_cards_by_rarity'):
+                uc_cards = arch.top_cards_by_rarity('uncommon', n=3)
+                cc_cards = arch.top_cards_by_rarity('common', n=3)
+                uc_str = ", ".join([c["name"] for c in uc_cards]) if uc_cards else "N/A"
+                cc_str = ", ".join([c["name"] for c in cc_cards]) if cc_cards else "N/A"
+                lines.append(f"- **{arch.guild_name}**: U:{uc_str} / C:{cc_str}")
 
         # Overall top cards in trophy decks
         lines.append("\n### Trophy Deck 핵심 카드 (전체)")
@@ -478,3 +703,15 @@ def build_format_overview_prompt(snapshot: MetaSnapshot) -> str:
     """Convenience function to build format overview prompt."""
     builder = PromptBuilder()
     return builder.build_format_overview_prompt(snapshot)
+
+
+def build_format_characteristics_prompt(snapshot: MetaSnapshot) -> str:
+    """Convenience function to build format characteristics prompt."""
+    builder = PromptBuilder()
+    return builder.build_format_characteristics_prompt(snapshot)
+
+
+def build_archetype_deep_dive_prompt(snapshot: MetaSnapshot) -> str:
+    """Convenience function to build archetype deep dive prompt."""
+    builder = PromptBuilder()
+    return builder.build_archetype_deep_dive_prompt(snapshot)

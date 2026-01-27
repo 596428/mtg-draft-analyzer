@@ -279,6 +279,9 @@ class HtmlReportGenerator:
             "format_speed": snapshot.format_speed,
             "splash_indicator": snapshot.splash_indicator,
 
+            # Trophy deck statistics (optional)
+            "trophy_stats": snapshot.trophy_stats,
+
             # Color analysis
             "color_strengths": snapshot.top_colors,
             "color_names": COLOR_NAMES,

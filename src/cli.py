@@ -54,6 +54,16 @@ def analyze(
         "--llm/--no-llm",
         help="Include LLM analysis (requires GEMINI_API_KEY)",
     ),
+    include_trophy: bool = typer.Option(
+        True,
+        "--trophy/--no-trophy",
+        help="Include trophy deck analysis (7-win decks from 17lands)",
+    ),
+    refresh_trophy: bool = typer.Option(
+        False,
+        "--refresh-trophy",
+        help="Force refresh trophy data from 17lands (ignore cache)",
+    ),
     generate_html: bool = typer.Option(
         False,
         "--html",
@@ -98,6 +108,8 @@ def analyze(
                 expansion=expansion,
                 format=format,
                 include_llm=include_llm,
+                include_trophy=include_trophy,
+                refresh_trophy=refresh_trophy,
                 progress_callback=progress_callback,
             )
         except Exception as e:

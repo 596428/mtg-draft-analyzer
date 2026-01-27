@@ -22,7 +22,7 @@ class GeminiClient:
         self,
         api_key: Optional[str] = None,
         model: str = "gemini-3-flash-preview",
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         temperature: float = 1.0,
     ):
         """
@@ -31,7 +31,7 @@ class GeminiClient:
         Args:
             api_key: Gemini API key (defaults to GEMINI_API_KEY env var)
             model: Model to use
-            max_tokens: Maximum response tokens
+            max_tokens: Maximum response tokens (increased from 4096 to 8192)
             temperature: Sampling temperature (Gemini 3 recommends 1.0)
         """
         load_dotenv()
@@ -158,6 +158,42 @@ class GeminiClient:
 
         return self._generate(prompt)
 
+    def generate_format_characteristics(self, snapshot: MetaSnapshot) -> Optional[str]:
+        """
+        Generate format characteristics analysis (section 1 only).
+
+        This produces the "📋 포맷 특성" section independently to avoid
+        token truncation issues.
+
+        Args:
+            snapshot: MetaSnapshot to analyze
+
+        Returns:
+            Format characteristics text or None
+        """
+        prompt = self.prompt_builder.build_format_characteristics_prompt(snapshot)
+        logger.info(f"Generating format characteristics for {snapshot.expansion}")
+
+        return self._generate(prompt)
+
+    def generate_archetype_deep_dive(self, snapshot: MetaSnapshot) -> Optional[str]:
+        """
+        Generate archetype deep dive analysis (section 2 only).
+
+        This produces the "🏆 상위 아키타입 심층 분석" section independently
+        to avoid token truncation issues.
+
+        Args:
+            snapshot: MetaSnapshot to analyze
+
+        Returns:
+            Archetype deep dive text or None
+        """
+        prompt = self.prompt_builder.build_archetype_deep_dive_prompt(snapshot)
+        logger.info(f"Generating archetype deep dive for {snapshot.expansion}")
+
+        return self._generate(prompt)
+
     def _parse_format_overview_sections(self, text: str) -> tuple[Optional[str], Optional[str]]:
         """
         Parse format_overview into two sections.
@@ -200,6 +236,7 @@ class GeminiClient:
         include_meta: bool = True,
         include_strategy: bool = True,
         include_format_overview: bool = True,
+        use_split_api: bool = True,
     ) -> MetaSnapshot:
         """
         Enrich snapshot with LLM analysis.
@@ -209,6 +246,8 @@ class GeminiClient:
             include_meta: Whether to include meta analysis
             include_strategy: Whether to include strategy tips
             include_format_overview: Whether to include format overview
+            use_split_api: Whether to use split API calls for format overview
+                           (recommended to avoid token truncation)
 
         Returns:
             Enriched snapshot
@@ -224,11 +263,27 @@ class GeminiClient:
             snapshot.llm_strategy_tips = self.get_strategy_tips(snapshot)
 
         if include_format_overview:
-            overview = self.generate_format_overview(snapshot)
-            snapshot.llm_format_overview = overview
-            # Parse into separate sections
-            format_char, arch_deep = self._parse_format_overview_sections(overview)
-            snapshot.llm_format_characteristics = format_char
-            snapshot.llm_archetype_deep_dive = arch_deep
+            if use_split_api:
+                # Use split API calls to avoid token truncation
+                logger.info("Using split API calls for format overview")
+                format_char = self.generate_format_characteristics(snapshot)
+                arch_deep = self.generate_archetype_deep_dive(snapshot)
+                snapshot.llm_format_characteristics = format_char
+                snapshot.llm_archetype_deep_dive = arch_deep
+                # Combine for backwards compatibility
+                if format_char and arch_deep:
+                    snapshot.llm_format_overview = f"{format_char}\n\n{arch_deep}"
+                elif format_char:
+                    snapshot.llm_format_overview = format_char
+                elif arch_deep:
+                    snapshot.llm_format_overview = arch_deep
+            else:
+                # Legacy single API call
+                overview = self.generate_format_overview(snapshot)
+                snapshot.llm_format_overview = overview
+                # Parse into separate sections
+                format_char, arch_deep = self._parse_format_overview_sections(overview)
+                snapshot.llm_format_characteristics = format_char
+                snapshot.llm_archetype_deep_dive = arch_deep
 
         return snapshot

@@ -1,0 +1,87 @@
+{% extends "guide_base.html.j2" %}
+{% set active_page = "special" %}
+{% set page_title = "Special Cards" %}
+
+{% block content %}
+        <!-- ==========================================
+             SLEEPERS & TRAPS
+             ========================================== -->
+        <section id="special-cards">
+            <h2>💎 Sleepers & Traps</h2>
+            <div class="special-cards-grid">
+                <div class="special-section">
+                    <h3><span class="icon">💎</span> Sleeper Cards</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Cards performing better than their pick rate suggests
+                    </p>
+                    <div class="special-list">
+                        {% for card in sleepers %}
+                        {% if card.image_uri %}
+                        <div class="special-card sleeper"
+                             data-name="{{ card.name | lower }}"
+                             data-grade="{{ card.grade }}"
+                             data-colors="{{ card.colors }}"
+                             data-rarity="{{ card.rarity.value }}"
+                             data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                             data-score="{{ card.composite_score }}"
+                             data-viable="{{ card.viable_archetypes }}"
+                             data-best-arch="{{ card.best_archetype or '' }}"
+                             data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                             style="cursor: pointer;"
+                             onclick="showCardModal(this)">
+                            <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                            <div class="info">
+                                <div class="name">{{ card.name }}</div>
+                                <div class="deviation positive">
+                                    +{{ "%.2f" | format(card.irregularity_z) }}σ |
+                                    {{ card.grade }} |
+                                    {{ card.stats.gih_wr | percent }} WR
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p style="color: var(--text-muted);">No significant sleepers detected.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="special-section">
+                    <h3><span class="icon">⚠️</span> Trap Cards</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                        Cards performing worse than their pick rate suggests
+                    </p>
+                    <div class="special-list">
+                        {% for card in traps %}
+                        {% if card.image_uri %}
+                        <div class="special-card trap"
+                             data-name="{{ card.name | lower }}"
+                             data-grade="{{ card.grade }}"
+                             data-colors="{{ card.colors }}"
+                             data-rarity="{{ card.rarity.value }}"
+                             data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                             data-score="{{ card.composite_score }}"
+                             data-viable="{{ card.viable_archetypes }}"
+                             data-best-arch="{{ card.best_archetype or '' }}"
+                             data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                             style="cursor: pointer;"
+                             onclick="showCardModal(this)">
+                            <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                            <div class="info">
+                                <div class="name">{{ card.name }}</div>
+                                <div class="deviation negative">
+                                    {{ "%.2f" | format(card.irregularity_z) }}σ |
+                                    {{ card.grade }} |
+                                    {{ card.stats.gih_wr | percent }} WR
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <p style="color: var(--text-muted);">No significant traps detected.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+{% endblock %}

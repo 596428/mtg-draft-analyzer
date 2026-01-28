@@ -1,0 +1,135 @@
+{% extends "guide_base.html.j2" %}
+{% set active_page = "cards" %}
+{% set page_title = "Card Database" %}
+
+{% block content %}
+        <!-- ==========================================
+             COLOR STRENGTH (Single Color Rankings)
+             ========================================== -->
+        <section id="color-strength">
+            <h2>🎨 Single Color Strength</h2>
+            <div class="color-grid">
+                {% for color in color_strengths %}
+                <div class="color-card" data-color="{{ color.color }}">
+                    <div class="color-icon">{{ color_icons.get(color.color, '⬜') }}</div>
+                    <div class="color-name">{{ color_names.get(color.color, color.color) }}</div>
+                    <div class="rank">#{{ color.rank }}</div>
+                    <div class="score">{{ "%.1f" | format(color.strength_score) }}</div>
+
+                    <!-- Color Metrics (bomb/depth) -->
+                    <div class="color-metrics">
+                        <span class="metric" title="Bomb Factor: How strong are the top cards">💣 {{ "%.0f" | format(color.bomb_factor | default(0)) }}%</span>
+                        <span class="metric" title="Pool Depth: How many playables in this color">📊 {{ "%.0f" | format(color.depth_factor | default(0)) }}%</span>
+                    </div>
+
+                    {% if color.top_commons %}
+                    <ul class="top-cards">
+                        <li><strong>Top Commons:</strong></li>
+                        {% for card_name in color.top_commons[:3] %}
+                        <li>• {{ card_name }}</li>
+                        {% endfor %}
+                        {% if color.top_uncommons %}
+                        <li style="margin-top: 8px;"><strong>Top Uncommons:</strong></li>
+                        {% for card_name in color.top_uncommons[:3] %}
+                        <li>• {{ card_name }}</li>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ==========================================
+             CARD TIER LIST
+             ========================================== -->
+        <section id="card-tiers">
+            <h2>⭐ Card Ratings</h2>
+
+            <div class="search-box">
+                <input type="text" id="card-search" placeholder="Search cards...">
+            </div>
+
+            <div class="filter-toggle">Filters</div>
+            <div class="filter-content">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label>Grade:</label>
+                        <div class="filter-buttons" id="grade-filters">
+                            <button data-grade="all" class="active">All</button>
+                            {% for grade in grade_order %}
+                            {% if cards_by_grade[grade] %}
+                            <button data-grade="{{ grade }}">{{ grade }}</button>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Rarity:</label>
+                        <div class="filter-buttons" id="rarity-filters">
+                            <button data-rarity="all" class="active">All</button>
+                            <button data-rarity="mythic">Mythic</button>
+                            <button data-rarity="rare">Rare</button>
+                            <button data-rarity="uncommon">Uncommon</button>
+                            <button data-rarity="common">Common</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Color:</label>
+                        <div class="filter-buttons" id="color-filters">
+                            <button data-color="all" class="active">All</button>
+                            <button data-color="W">☀️ W</button>
+                            <button data-color="U">💧 U</button>
+                            <button data-color="B">💀 B</button>
+                            <button data-color="R">🔥 R</button>
+                            <button data-color="G">🌲 G</button>
+                            <button data-color="multi">🌈 Multi</button>
+                            <button data-color="colorless">⬜ C</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid" id="all-cards-grid">
+                {% for card in all_cards %}
+                {% if card.image_uri %}
+                <div class="card-item"
+                     data-name="{{ card.name | lower }}"
+                     data-grade="{{ card.grade }}"
+                     data-colors="{{ card.colors }}"
+                     data-rarity="{{ card.rarity.value }}"
+                     data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                     data-score="{{ card.composite_score }}"
+                     data-viable="{{ card.viable_archetypes }}"
+                     data-best-arch="{{ card.best_archetype or '' }}"
+                     data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                     data-irregularity="{{ card.irregularity_type }}"
+                     onclick="showCardModal(this)">
+                    <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                    {% if card.name in bomb_names or card.name in top_common_names or card.name in top_uncommon_names %}
+                    <div class="card-badges">
+                        {% if card.name in bomb_names %}<span class="badge-icon" title="BOMB">💣</span>{% endif %}
+                        {% if card.name in top_common_names %}<span class="badge-icon" title="Top Common">💎</span>{% endif %}
+                        {% if card.name in top_uncommon_names %}<span class="badge-icon" title="Top Uncommon">⭐</span>{% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="card-info">
+                        <span class="name" title="{{ card.name }}">{{ card.name }}</span>
+                        <div class="stats">
+                            <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                            <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="no-results hidden" id="no-results">
+                No cards match your filters. Try adjusting your search.
+            </div>
+        </section>
+{% endblock %}

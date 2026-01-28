@@ -2,6 +2,7 @@
 
 import logging
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -81,6 +82,14 @@ COLOR_ICONS = {
 
 class HtmlReportGenerator:
     """Generates interactive HTML draft guides from MetaSnapshot."""
+
+    # Multi-page configuration: (output_filename, template_name, active_page_key)
+    PAGES = [
+        ("index.html", "guide_overview.html.j2", "overview"),
+        ("archetypes.html", "guide_archetypes.html.j2", "archetypes"),
+        ("cards.html", "guide_cards.html.j2", "cards"),
+        ("special.html", "guide_special.html.j2", "special"),
+    ]
 
     def __init__(
         self,
@@ -213,7 +222,7 @@ class HtmlReportGenerator:
         include_llm: bool = True,
     ) -> str:
         """
-        Generate interactive HTML draft guide from meta snapshot.
+        Generate interactive HTML draft guide from meta snapshot (single file).
 
         Args:
             snapshot: MetaSnapshot to generate guide from
@@ -223,7 +232,149 @@ class HtmlReportGenerator:
             Complete HTML string
         """
         template = self.env.from_string(self._get_template_content())
+        context = self._prepare_context(snapshot, include_llm)
+        return template.render(**context)
 
+    def _get_archetype_cards(
+        self,
+        snapshot: MetaSnapshot,
+        archetype: Archetype,
+    ) -> list[Card]:
+        """Get top performing cards for a specific archetype.
+
+        Includes cards if:
+        1. They have explicit win rate data for this archetype colors.
+        2. Their color identity is a subset of the archetype colors (for 3-color archetypes).
+        """
+        matching_cards = []
+        arch_colors_set = set(archetype.colors)
+        
+        for card in snapshot.all_cards:
+            # Check 1: Explicit data match (preferred)
+            if archetype.colors in card.stats.archetype_wrs:
+                matching_cards.append(card)
+                continue
+                
+            # Check 2: Subset logic (important for 3-color archetypes to show 2-color/mono cards)
+            # Only include cards with some colors, and they must be a subset of the archetype
+            if card.colors and set(card.colors).issubset(arch_colors_set):
+                # We only add it if it's a reasonably good card (Grade C or better) 
+                # to avoid cluttering 3-color lists with every single mono filler
+                if card.composite_score >= 40:
+                    matching_cards.append(card)
+
+        # Sort by composite_score (descending)
+        matching_cards.sort(key=lambda c: c.composite_score, reverse=True)
+
+        return matching_cards
+
+    def save_report(
+        self,
+        snapshot: MetaSnapshot,
+        output_dir: str = "output",
+        include_llm: bool = True,
+        single_file: bool = False,
+    ) -> str:
+        """
+        Generate and save HTML draft guide to file.
+
+        Args:
+            snapshot: MetaSnapshot to generate guide from
+            output_dir: Output directory
+            include_llm: Whether to include LLM analysis
+            single_file: If True, generate legacy single-file HTML
+
+        Returns:
+            Path to saved HTML file or directory
+        """
+        if single_file:
+            return self._save_single_file(snapshot, output_dir, include_llm)
+        else:
+            return self._save_multi_file(snapshot, output_dir, include_llm)
+
+    def _save_single_file(
+        self,
+        snapshot: MetaSnapshot,
+        output_dir: str,
+        include_llm: bool,
+    ) -> str:
+        """Generate legacy single-file HTML output."""
+        # Generate content using the original single-file template
+        content = self.generate_html(snapshot, include_llm)
+
+        # Create output directory
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Generate filename
+        timestamp = snapshot.timestamp.strftime("%Y-%m-%d")
+        filename = f"{snapshot.expansion}_{snapshot.format}_{timestamp}_draft_guide.html"
+        filepath = output_path / filename
+
+        # Write file
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        logger.info(f"HTML guide saved to {filepath}")
+
+        return str(filepath)
+
+    def _save_multi_file(
+        self,
+        snapshot: MetaSnapshot,
+        output_dir: str,
+        include_llm: bool,
+    ) -> str:
+        """Generate multi-file HTML output with shared CSS/JS."""
+        # Create output directory structure
+        timestamp = snapshot.timestamp.strftime("%Y-%m-%d")
+        base_name = f"{snapshot.expansion}_{snapshot.format}_{timestamp}"
+        report_dir = Path(output_dir) / base_name
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create CSS/JS directories
+        css_dir = report_dir / "css"
+        js_dir = report_dir / "js"
+        css_dir.mkdir(exist_ok=True)
+        js_dir.mkdir(exist_ok=True)
+
+        # Copy static assets
+        static_dir = self.template_dir / "static"
+        if (static_dir / "guide.css").exists():
+            shutil.copy(static_dir / "guide.css", css_dir / "guide.css")
+            logger.info(f"Copied guide.css to {css_dir}")
+        if (static_dir / "guide.js").exists():
+            shutil.copy(static_dir / "guide.js", js_dir / "guide.js")
+            logger.info(f"Copied guide.js to {js_dir}")
+
+        # Prepare common context
+        context = self._prepare_context(snapshot, include_llm)
+
+        # Generate each page
+        for filename, template_name, active_page in self.PAGES:
+            try:
+                template = self.env.get_template(template_name)
+                context["active_page"] = active_page
+                context["page_title"] = active_page.title()
+                content = template.render(**context)
+
+                filepath = report_dir / filename
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(content)
+                logger.info(f"Generated {filepath}")
+            except Exception as e:
+                logger.error(f"Failed to generate {filename}: {e}")
+                raise
+
+        logger.info(f"Multi-page HTML guide saved to {report_dir}")
+        return str(report_dir)
+
+    def _prepare_context(
+        self,
+        snapshot: MetaSnapshot,
+        include_llm: bool,
+    ) -> dict:
+        """Prepare the template context dictionary."""
         # Prepare card groupings
         all_cards_sorted = sorted(
             snapshot.all_cards,
@@ -241,7 +392,6 @@ class HtmlReportGenerator:
             arch_cards = self._get_archetype_cards(snapshot, arch)
             archetypes_data.append({
                 "archetype": arch,
-                # Pass all cards, template filters by rarity (10 per group)
                 "top_cards": arch_cards,
             })
 
@@ -267,7 +417,7 @@ class HtmlReportGenerator:
             if card.grade in ("S", "A+"):
                 bomb_names.add(card.name)
 
-        context = {
+        return {
             # Meta info
             "expansion": snapshot.expansion,
             "format": snapshot.format,
@@ -312,82 +462,9 @@ class HtmlReportGenerator:
             "grade_order": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"],
 
             # LLM analysis (optional)
-            "llm_color_strategy": snapshot.llm_color_strategy if include_llm else None,  # 🎨 색상 전략
+            "llm_color_strategy": snapshot.llm_color_strategy if include_llm else None,
             "llm_strategy": snapshot.llm_strategy_tips if include_llm else None,
             "llm_format_overview": snapshot.llm_format_overview if include_llm else None,
-            # Parsed sections for reordering
             "llm_format_characteristics": snapshot.llm_format_characteristics if include_llm else None,
             "llm_archetype_deep_dive": snapshot.llm_archetype_deep_dive if include_llm else None,
         }
-
-        return template.render(**context)
-
-    def _get_archetype_cards(
-        self,
-        snapshot: MetaSnapshot,
-        archetype: Archetype,
-    ) -> list[Card]:
-        """Get top performing cards for a specific archetype.
-
-        Includes cards if:
-        1. They have explicit win rate data for this archetype colors.
-        2. Their color identity is a subset of the archetype colors (for 3-color archetypes).
-        """
-        matching_cards = []
-        arch_colors_set = set(archetype.colors)
-        
-        for card in snapshot.all_cards:
-            # Check 1: Explicit data match (preferred)
-            if archetype.colors in card.stats.archetype_wrs:
-                matching_cards.append(card)
-                continue
-                
-            # Check 2: Subset logic (important for 3-color archetypes to show 2-color/mono cards)
-            # Only include cards with some colors, and they must be a subset of the archetype
-            if card.colors and set(card.colors).issubset(arch_colors_set):
-                # We only add it if it's a reasonably good card (Grade C or better) 
-                # to avoid cluttering 3-color lists with every single mono filler
-                if card.composite_score >= 40:
-                    matching_cards.append(card)
-
-        # Sort by composite_score (descending)
-        matching_cards.sort(key=lambda c: c.composite_score, reverse=True)
-
-        return matching_cards
-
-    def save_report(
-        self,
-        snapshot: MetaSnapshot,
-        output_dir: str = "output",
-        include_llm: bool = True,
-    ) -> str:
-        """
-        Generate and save HTML draft guide to file.
-
-        Args:
-            snapshot: MetaSnapshot to generate guide from
-            output_dir: Output directory
-            include_llm: Whether to include LLM analysis
-
-        Returns:
-            Path to saved HTML file
-        """
-        # Generate content
-        content = self.generate_html(snapshot, include_llm)
-
-        # Create output directory
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-
-        # Generate filename
-        timestamp = snapshot.timestamp.strftime("%Y-%m-%d")
-        filename = f"{snapshot.expansion}_{snapshot.format}_{timestamp}_draft_guide.html"
-        filepath = output_path / filename
-
-        # Write file
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(content)
-
-        logger.info(f"HTML guide saved to {filepath}")
-
-        return str(filepath)

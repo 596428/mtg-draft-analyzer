@@ -1,0 +1,150 @@
+{% extends "guide_base.html.j2" %}
+{% set active_page = "overview" %}
+{% set page_title = "Overview" %}
+
+{% block content %}
+        <!-- ==========================================
+             FORMAT OVERVIEW
+             ========================================== -->
+        <section id="format-overview">
+            <h2>📊 Format Overview</h2>
+
+            <!-- Format Speed Analysis Panel (17lands play_draw API) -->
+            {% if format_speed and format_speed.average_game_length %}
+            <div class="speed-analysis-panel">
+                <h3>⚡ 포맷 속도 분석</h3>
+
+                <!-- 1. 기초 데이터 (Basic Data) -->
+                <div class="speed-data-section">
+                    <h4>📈 기초 데이터</h4>
+                    <div class="speed-metrics">
+                        <div class="speed-metric">
+                            <span class="metric-label">평균 게임 길이</span>
+                            <span class="metric-value">{{ "%.2f" | format(format_speed.average_game_length) }}턴</span>
+                            <span class="metric-range">(전체 포맷 범위: 6.6~9.9턴)</span>
+                        </div>
+                        <div class="speed-metric">
+                            <span class="metric-label">선공 승률</span>
+                            <span class="metric-value">{{ "%.1f" | format(format_speed.win_rate_on_play * 100) }}%</span>
+                            <span class="metric-range">(전체 포맷 범위: 50~54%)</span>
+                        </div>
+                        {% if format_speed.play_draw_sample_size %}
+                        <div class="speed-metric">
+                            <span class="metric-label">분석 게임 수</span>
+                            <span class="metric-value">{{ format_speed.play_draw_sample_size | format_number }}</span>
+                            <span class="metric-range">&nbsp;</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 2. 해석 (Interpretation) -->
+                <div class="speed-interpretation-section">
+                    <h4>🔍 해석</h4>
+                    <p class="interpretation-text">{{ format_speed.speed_interpretation }}</p>
+                    <div class="supporting-metrics">
+                        참고: 템포 비율 {{ "%.3f" | format(format_speed.tempo_ratio) }},
+                        저/고마나 승률차 {{ "%+.1f" | format(format_speed.aggro_advantage * 100) }}%p
+                    </div>
+                </div>
+
+                <!-- 3. 결론 (Conclusion) -->
+                <div class="speed-conclusion-section">
+                    <h4>🎯 결론</h4>
+                    <span class="speed-badge {{ format_speed.speed_label }}">{{ format_speed.speed_label }}</span>
+                    {% if format_speed.recommendation %}
+                    <p class="speed-recommendation">{{ format_speed.recommendation }}</p>
+                    {% endif %}
+                </div>
+
+                {% if format_speed.conflicts %}
+                <div class="speed-conflicts">
+                    <div class="conflict-title">⚠️ 참고: 상충 신호</div>
+                    <ul>
+                        {% for conflict in format_speed.conflicts %}
+                        <li>{{ conflict }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Format Stats Grid -->
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <span class="label">Total Cards</span>
+                    <span class="value">{{ total_cards }}</span>
+                </div>
+                {% if format_speed %}
+                <div class="stat-card">
+                    <span class="label">
+                        Format Speed
+                        <span class="info-icon" data-tooltip="템포 비율 기반 포맷 속도. 빠름: 어그로 유리, 느림: 컨트롤 유리">ⓘ</span>
+                    </span>
+                    <span class="value {% if '빠' in format_speed.speed_label or '고속' in format_speed.speed_label %}fast{% elif '느' in format_speed.speed_label %}slow{% endif %}">{{ format_speed.speed_label }}</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">
+                        Tempo Ratio (OH/GD)
+                        <span class="info-icon" data-tooltip="오프닝 핸드 WR / 드로우 WR. >1.0: 초반 유리, <1.0: 후반 유리">ⓘ</span>
+                    </span>
+                    <span class="value">{{ "%.3f" | format(format_speed.tempo_ratio) }}</span>
+                </div>
+                {% endif %}
+                {% if splash_indicator %}
+                <div class="stat-card">
+                    <span class="label">
+                        Splash Viability
+                        <span class="info-icon" data-tooltip="듀얼랜드 수와 픽 순위 기반. 높음: 3색 가능, 낮음: 2색 집중">ⓘ</span>
+                    </span>
+                    <span class="value {% if '높' in splash_indicator.splash_label %}high{% elif '낮' in splash_indicator.splash_label %}low{% endif %}">{{ splash_indicator.splash_label }}</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">
+                        Dual Land ALSA
+                        <span class="info-icon" data-tooltip="듀얼랜드 평균 픽 순위. 낮을수록 수요 높음 (7.0 기준)">ⓘ</span>
+                    </span>
+                    <span class="value">{{ "%.1f" | format(splash_indicator.dual_land_alsa) }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if llm_format_characteristics or llm_color_strategy or llm_archetype_deep_dive %}
+            <div class="format-analysis">
+                <h3>🤖 AI Analysis</h3>
+                <div class="analysis-content">
+                    {# 1. 📋 포맷 특성 (메타요약 + 속도 + 스플래시 + 세트특징) #}
+                    {% if llm_format_characteristics %}
+                    {{ llm_format_characteristics | markdown }}
+                    {% endif %}
+
+                    {# 2. 🎨 색상 전략 (5색 분석 + P1P1 + 상위 커먼) #}
+                    {% if llm_color_strategy %}
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+                    {{ llm_color_strategy | markdown }}
+                    {% endif %}
+
+                    {# 3. 🏆 상위 아키타입 심층 분석 #}
+                    {% if llm_archetype_deep_dive %}
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+                    {{ llm_archetype_deep_dive | markdown }}
+                    {% endif %}
+                </div>
+            </div>
+            {% elif format_speed and format_speed.recommendation %}
+            <div style="margin-top: 20px; padding: 15px; background: var(--bg-card); border-radius: var(--border-radius); border-left: 4px solid var(--accent-blue);">
+                <strong>💡 Strategy Tip:</strong> {{ format_speed.recommendation }}
+            </div>
+            {% endif %}
+
+            {% if llm_strategy %}
+            <div class="format-analysis" style="margin-top: 20px;">
+                <h3>📝 Strategy Tips</h3>
+                <div class="analysis-content">
+                    {{ llm_strategy | markdown }}
+                </div>
+            </div>
+            {% endif %}
+        </section>
+{% endblock %}

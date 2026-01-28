@@ -1,0 +1,368 @@
+{% extends "guide_base.html.j2" %}
+{% set active_page = "archetypes" %}
+{% set page_title = "Archetypes" %}
+
+{% block content %}
+        <!-- ==========================================
+             ARCHETYPE TIER LIST
+             ========================================== -->
+        <section id="archetype-tier-list">
+            <h2>🏆 Archetype Tier List</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
+                Archetypes with >2.0% meta share. Click to view details.
+            </p>
+
+            <div class="table-responsive">
+                <table class="tier-list-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">Rank</th>
+                            <th>Archetype</th>
+                            <th>Win Rate</th>
+                            <th>Meta Share</th>
+                            {% if trophy_stats %}<th>🏆 7승 점유율</th>{% endif %}
+                            <th>Best Splash Variant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for arch in archetypes %}
+                        <tr onclick="document.querySelector('button[data-arch=\'{{ arch.colors }}\']').click(); document.getElementById('archetypes').scrollIntoView({behavior: 'smooth'});">
+                            <td class="tier-rank {% if loop.index <= 3 %}top-3{% endif %}">#{{ arch.rank }}</td>
+                            <td>
+                                <div class="tier-name">
+                                    <span class="arch-icon">{{ arch.colors }}</span>
+                                    {{ arch.guild_name }}
+                                </div>
+                            </td>
+                            <td class="tier-wr">{{ arch.win_rate | percent2 }}</td>
+                            <td class="tier-meta">{{ arch.meta_share | percent }}</td>
+                            {% if trophy_stats %}
+                            <td class="tier-trophy">
+                                {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                                {% if trophy_arch %}
+                                    <span class="trophy-share">{{ ((trophy_arch.trophy_count / trophy_stats.analyzed_decks) * 100) | round(1) }}%</span>
+                                {% else %}
+                                    <span style="color: var(--text-muted);">-</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            <td class="tier-splash">
+                                {% if arch.variants and arch.variants|length > 0 %}
+                                    {% set best_variant = arch.variants[0] %}
+                                    {% set delta_sign = "+" if best_variant.win_rate_delta > 0 else "" %}
+                                    <div class="splash-tag {% if best_variant.win_rate_delta > 0 %}positive{% else %}negative{% endif %}">
+                                        <span>+{{ best_variant.added_color }}</span>
+                                        <span class="splash-delta">{{ delta_sign }}{{ (best_variant.win_rate_delta * 100) | round(1) }}%</span>
+                                    </div>
+                                {% else %}
+                                    <span style="color: var(--text-muted);">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             ARCHETYPE GUIDE
+             ========================================== -->
+        <section id="archetypes">
+            <h2>🏛️ Archetypes Detail</h2>
+            <div class="archetype-tabs">
+                {% for arch in archetypes %}
+                <button data-arch="{{ arch.colors }}" {% if loop.first %}class="active"{% endif %}>
+                    {{ arch.guild_name }} ({{ arch.colors }})
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="archetype-content">
+                {% for item in archetypes_data %}
+                {% set arch = item.archetype %}
+                <div class="arch-panel {% if loop.first %}active{% endif %}" id="arch-{{ arch.colors }}">
+                    <div class="arch-header">
+                        <h3>{{ arch.guild_name }} ({{ arch.colors }})</h3>
+                        <div class="arch-stats">
+                            <div class="arch-stat">
+                                <div class="label">Win Rate</div>
+                                <div class="value">{{ arch.win_rate | percent2 }}</div>
+                            </div>
+                            <div class="arch-stat">
+                                <div class="label">Rank</div>
+                                <div class="value">#{{ arch.rank }}</div>
+                            </div>
+                            <div class="arch-stat">
+                                <div class="label">Synergy Lift</div>
+                                <div class="value">{{ arch.synergy_lift | percent }}</div>
+                            </div>
+                            <div class="arch-stat">
+                                <div class="label">Meta Share</div>
+                                <div class="value">{{ arch.meta_share | percent }}</div>
+                            </div>
+                            {% if trophy_stats %}
+                            {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                            {% if trophy_arch %}
+                            <div class="arch-stat">
+                                <div class="label">🏆 7승 점유율</div>
+                                <div class="value trophy-share">{{ ((trophy_arch.trophy_count / trophy_stats.analyzed_decks) * 100) | round(1) }}%</div>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# Trophy Analysis Section #}
+                    {% if trophy_stats %}
+                    {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                    {% if trophy_arch and trophy_arch.trophy_count > 0 %}
+                    <div class="trophy-section">
+                        <h4>🏆 7승 덱 분석 ({{ trophy_arch.trophy_count }}개)</h4>
+
+                        {# Combined metrics + CMC curve in single row #}
+                        <div class="trophy-stats-row">
+                            <div class="trophy-metrics-compact">
+                                <div class="trophy-metric">
+                                    <span class="metric-label">평균 CMC</span>
+                                    <span class="metric-value">{{ trophy_arch.avg_cmc | round(2) }}</span>
+                                </div>
+                                <div class="trophy-metric">
+                                    <span class="metric-label">생물 카드 평균</span>
+                                    <span class="metric-value">{{ trophy_arch.avg_creature_count | round(1) }}장</span>
+                                </div>
+                                {% if trophy_arch.splash_rate %}
+                                <div class="trophy-metric">
+                                    <span class="metric-label">스플래시</span>
+                                    <span class="metric-value">{{ (trophy_arch.splash_rate * 100) | round }}%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {# CMC Distribution Bar Chart - inline #}
+                            {% if trophy_arch.cmc_distribution %}
+                            <div class="cmc-curve-inline">
+                                <span class="cmc-label">Mana Curve:</span>
+                                {% set cmc_values = [trophy_arch.cmc_distribution.get('1', 0), trophy_arch.cmc_distribution.get('2', 0), trophy_arch.cmc_distribution.get('3', 0), trophy_arch.cmc_distribution.get('4', 0), trophy_arch.cmc_distribution.get('5', 0), trophy_arch.cmc_distribution.get('6+', 0)] %}
+                                {% set max_cmc = cmc_values | max %}
+                                {% set total_cmc = cmc_values | sum %}
+                                {% for cmc_label in ['1', '2', '3', '4', '5', '6+'] %}
+                                {% set cmc_count = trophy_arch.cmc_distribution.get(cmc_label, 0) %}
+                                {% set avg_cards = ((cmc_count / total_cmc) * 23) | round(1) if total_cmc > 0 else 0 %}
+                                <div class="cmc-bar">
+                                    <div class="cmc-bar-fill" style="height: {{ ((cmc_count / max_cmc) * 35) if max_cmc > 0 else 3 }}px;"></div>
+                                    <span class="cmc-bar-label">{{ cmc_label }}</span>
+                                    <span class="cmc-bar-count">{{ avg_cards }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {# Top Cards by Rarity with hover support #}
+                        <div class="trophy-cards-group">
+                            <h5>Mythic / Rare (Top 5)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('mythic', 'rare', n=5) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="trophy-cards-group">
+                            <h5>Uncommon (Top 7)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('uncommon', n=7) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="trophy-cards-group">
+                            <h5>Common (Top 7)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('common', n=7) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <h4 style="margin: 20px 0 10px;">Key Cards</h4>
+
+                    <!-- Mythic & Rare -->
+                    {% set mythic_rare_cards = item.top_cards | selectattr('rarity.value', 'in', ['mythic', 'rare']) | list %}
+                    {% if mythic_rare_cards %}
+                    <div class="rarity-group">
+                        <span class="rarity-label rare-label">Mythic / Rare</span>
+                        <div class="card-row card-row-small">
+                            {% for card in mythic_rare_cards[:10] %}
+                            {% if card.image_uri %}
+                            <div class="card-item card-item-small"
+                                 data-name="{{ card.name | lower }}"
+                                 data-grade="{{ card.grade }}"
+                                 data-colors="{{ card.colors }}"
+                                 data-rarity="{{ card.rarity.value }}"
+                                 data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                                 data-score="{{ card.composite_score }}"
+                                 data-viable="{{ card.viable_archetypes }}"
+                                 data-best-arch="{{ card.best_archetype or '' }}"
+                                 data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                                 onclick="showCardModal(this)">
+                                <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                                {% if card.name in bomb_names %}<div class="card-badges"><span class="badge-icon" title="BOMB">💣</span></div>{% endif %}
+                                <div class="card-info">
+                                    <span class="name">{{ card.name }}</span>
+                                    <div class="stats">
+                                        <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                        <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Uncommon -->
+                    {% set uncommon_cards = item.top_cards | selectattr('rarity.value', 'equalto', 'uncommon') | list %}
+                    {% if uncommon_cards %}
+                    <div class="rarity-group">
+                        <span class="rarity-label uncommon-label">Uncommon</span>
+                        <div class="card-row card-row-small">
+                            {% for card in uncommon_cards[:10] %}
+                            {% if card.image_uri %}
+                            <div class="card-item card-item-small"
+                                 data-name="{{ card.name | lower }}"
+                                 data-grade="{{ card.grade }}"
+                                 data-colors="{{ card.colors }}"
+                                 data-rarity="{{ card.rarity.value }}"
+                                 data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                                 data-score="{{ card.composite_score }}"
+                                 data-viable="{{ card.viable_archetypes }}"
+                                 data-best-arch="{{ card.best_archetype or '' }}"
+                                 data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                                 onclick="showCardModal(this)">
+                                <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                                {% if card.name in top_uncommon_names %}<div class="card-badges"><span class="badge-icon" title="Top Uncommon">⭐</span></div>{% endif %}
+                                <div class="card-info">
+                                    <span class="name">{{ card.name }}</span>
+                                    <div class="stats">
+                                        <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                        <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Common -->
+                    {% set common_cards = item.top_cards | selectattr('rarity.value', 'equalto', 'common') | list %}
+                    {% if common_cards %}
+                    <div class="rarity-group">
+                        <span class="rarity-label common-label">Common</span>
+                        <div class="card-row card-row-small">
+                            {% for card in common_cards[:10] %}
+                            {% if card.image_uri %}
+                            <div class="card-item card-item-small"
+                                 data-name="{{ card.name | lower }}"
+                                 data-grade="{{ card.grade }}"
+                                 data-colors="{{ card.colors }}"
+                                 data-rarity="{{ card.rarity.value }}"
+                                 data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                                 data-score="{{ card.composite_score }}"
+                                 data-viable="{{ card.viable_archetypes }}"
+                                 data-best-arch="{{ card.best_archetype or '' }}"
+                                 data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                                 onclick="showCardModal(this)">
+                                <img src="{{ card.image_uri }}" alt="{{ card.name }}" loading="lazy">
+                                {% if card.name in top_common_names %}<div class="card-badges"><span class="badge-icon" title="Top Common">💎</span></div>{% endif %}
+                                <div class="card-info">
+                                    <span class="name">{{ card.name }}</span>
+                                    <div class="stats">
+                                        <span class="grade grade-{{ card.grade | grade_class }}">{{ card.grade }}</span>
+                                        <span class="win-rate">{{ card.stats.gih_wr | percent }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if arch.synergy_cards %}
+                    <h4 style="margin: 20px 0 10px;">Synergy Cards</h4>
+                    <div class="synergy-cards-list">
+                        {% for card_name in arch.synergy_cards %}
+                        {% set card = all_cards | selectattr('name', 'equalto', card_name) | first %}
+                        {% if card %}
+                        <span class="synergy-card-text"
+                              data-name="{{ card.name | lower }}"
+                              data-grade="{{ card.grade }}"
+                              data-colors="{{ card.colors }}"
+                              data-rarity="{{ card.rarity.value }}"
+                              data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                              data-score="{{ card.composite_score }}"
+                              data-viable="{{ card.viable_archetypes }}"
+                              data-best-arch="{{ card.best_archetype or '' }}"
+                              data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                              data-image="{{ card.image_uri or '' }}"
+                              onclick="showCardModal(this)">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% else %}
+                        <span class="synergy-card-text-nodata">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if arch.trap_cards %}
+                    <h4 style="margin: 20px 0 10px; color: var(--accent-red);">⚠️ Trap Cards in {{ arch.guild_name }}</h4>
+                    <div class="trap-cards-list">
+                        {% for card_name in arch.trap_cards[:5] %}
+                        {% set card = all_cards | selectattr('name', 'equalto', card_name) | first %}
+                        {% if card %}
+                        <span class="trap-card-text"
+                              data-name="{{ card.name | lower }}"
+                              data-grade="{{ card.grade }}"
+                              data-colors="{{ card.colors }}"
+                              data-rarity="{{ card.rarity.value }}"
+                              data-wr="{{ card.stats.gih_wr if card.stats.gih_wr is not none else '' }}"
+                              data-score="{{ card.composite_score }}"
+                              data-viable="{{ card.viable_archetypes }}"
+                              data-best-arch="{{ card.best_archetype or '' }}"
+                              data-arch-wrs='{{ card.stats.archetype_wrs | tojson }}'
+                              data-image="{{ card.image_uri or '' }}"
+                              onclick="showCardModal(this)">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% else %}
+                        <span class="trap-card-text-nodata">{{ card_name }}</span>{% if not loop.last %}, {% endif %}
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+{% endblock %}

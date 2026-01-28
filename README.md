@@ -1,23 +1,30 @@
 # MTG Draft Meta Analyzer
 
-> **[📊 ECL Draft Guide (Live)](https://mtg-ecl-draft-guide.netlify.app/ecl_premierdraft_2026-01-26_draft_guide)** | **[📖 Metrics Guide](./METRICS_GUIDE.md)**
+> **[Live Demo: ECL Draft Guide](https://mtg-ecl-draft-guide.netlify.app)** | **[Metrics Guide](./METRICS_GUIDE.md)**
 
-17lands 데이터를 활용한 MTG Arena 드래프트 메타 분석 시스템
+A comprehensive MTG Arena draft analysis system powered by 17lands data.
+
+## Features
+
+- **Card Scoring**: Wilson Score + Z-Score based composite card ratings
+- **Color Analysis**: Single color strength and archetype analysis
+- **Archetype Ranking**: Win rates and synergy analysis for all 2-color pairs
+- **Format Speed Analysis**: Game length and play/draw statistics from 17lands API
+- **Trophy Deck Analysis**: Insights from 7-x winning deck compositions
+- **Sleeper/Trap Detection**: Automatically identifies undervalued and overvalued cards
+- **Multi-Page HTML Guide**: Interactive web guide with filtering, search, and card modals
+- **LLM Integration**: Strategic insights via Gemini API
+- **Report Generation**: Markdown and JSON exports
 
 ## Live Demo
 
 **Interactive Draft Guide**: https://mtg-ecl-draft-guide.netlify.app
 
-## Features
-
-- **Card Scoring**: Wilson Score + Z-Score 기반 카드 종합 점수 산출
-- **Color Analysis**: 색깔별 강도 및 아키타입 분석
-- **Archetype Ranking**: 10개 2색 조합(길드)별 승률 및 시너지 분석
-- **Format Speed Analysis**: 17lands play_draw API 기반 포맷 속도 분석 (평균 게임 길이, 선공 승률)
-- **Sleeper/Trap Detection**: 저평가/고평가 카드 자동 탐지
-- **Interactive HTML Guide**: 필터링, 검색, 모달 기능이 포함된 웹 가이드 생성
-- **LLM Integration**: Gemini API를 통한 전략 해석
-- **Markdown/JSON Reports**: 분석 결과 보고서 자동 생성
+The guide includes:
+- **Overview**: Format speed analysis, key statistics, AI-generated strategy insights
+- **Archetypes**: Tier rankings, detailed archetype breakdowns with key cards
+- **Card Database**: Filterable card list by grade, rarity, and color
+- **Special Cards**: Sleeper and trap card identification
 
 ## Installation
 
@@ -35,7 +42,7 @@ uv sync
 ### Analyze a Draft Format
 
 ```bash
-# Basic analysis with HTML guide
+# Basic analysis with HTML guide (no LLM)
 uv run draft-analyzer analyze FDN --html --no-llm
 
 # Full analysis with LLM interpretation (requires GEMINI_API_KEY)
@@ -61,10 +68,23 @@ uv run draft-analyzer cache-stats
 uv run draft-analyzer cache-clear
 ```
 
-## Output
+## Output Structure
 
 Reports are saved to the `output/` directory:
-- `{SET}_{FORMAT}_{DATE}_draft_guide.html` - Interactive HTML guide
+
+```
+output/{SET}_{FORMAT}_{DATE}/
+├── index.html          # Overview page (main entry)
+├── archetypes.html     # Archetype tier list and details
+├── cards.html          # Card database with filters
+├── special.html        # Sleeper and trap cards
+├── css/
+│   └── guide.css       # Shared styles
+└── js/
+    └── guide.js        # Shared JavaScript
+```
+
+Additional exports:
 - `{SET}_{FORMAT}_{DATE}_meta_report.md` - Markdown report
 - `{SET}_{FORMAT}_{DATE}_meta.json` - JSON data export
 
@@ -100,83 +120,101 @@ Weighted combination of Z-normalized metrics:
 
 ### Bayesian Adjustment
 
-- Wilson Score Lower Bound 적용
-- 샘플 수가 적은 카드는 50%로 회귀
-- 대량 샘플 카드의 실제 성능이 더 정확히 반영됨
+- Wilson Score Lower Bound applied
+- Cards with small sample sizes regress toward 50%
+- High-sample cards reflect true performance more accurately
 
-### Grades
+### Grades (13-tier system)
 
 | Grade | Score Range | Description |
 |-------|-------------|-------------|
-| A+ | 90+ | 최상위 폭탄 |
-| A | 80-89 | 폭탄급 |
-| A- | 75-79 | 준폭탄 |
-| B+ | 70-74 | 우선 픽 |
-| B | 60-69 | 좋은 픽 |
-| B- | 55-59 | 준수한 픽 |
-| C+ | 50-54 | 플레이어블 |
-| C | 40-49 | 필러급 |
-| C- | 35-39 | 약한 필러 |
-| D | 30-34 | 사이드보드 |
-| F | 0-29 | 플레이 불가 |
+| A+ | 90+ | Top-tier bomb |
+| A | 80-89 | Bomb |
+| A- | 75-79 | Near-bomb |
+| B+ | 70-74 | Premium pick |
+| B | 60-69 | Good pick |
+| B- | 55-59 | Solid pick |
+| C+ | 50-54 | Playable |
+| C | 40-49 | Filler |
+| C- | 35-39 | Weak filler |
+| D+ | 32-34 | Below average |
+| D | 28-31 | Sideboard |
+| D- | 25-27 | Barely playable |
+| F | 0-24 | Unplayable |
 
 ### Irregularity Detection
 
-- **Sleeper**: 픽 순위 대비 높은 승률을 보이는 저평가 카드
-- **Trap**: 픽 순위 대비 낮은 승률을 보이는 고평가 카드
+- **Sleeper**: Cards with high win rates relative to their pick position (undervalued)
+- **Trap**: Cards with low win rates relative to their pick position (overvalued)
 
 ## Color Strength Calculation
 
 | Component | Weight | Description |
 |-----------|--------|-------------|
-| Deck WR Strength | 35% | 해당 색 카드의 덱 승률 평균 |
-| Archetype Success | 25% | 관련 2색 조합들의 평균 승률 |
-| Top Common Avg | 15% | 상위 커먼 10장의 평균 점수 |
-| Top Uncommon Avg | 10% | 상위 언커먼 5장의 평균 점수 |
-| Bomb Factor | 10% | 레어/미식 폭탄의 품질 |
-| Depth Factor | 5% | 플레이어블 카드의 총 개수 |
+| Deck WR Strength | 35% | Average deck win rate for cards in this color |
+| Archetype Success | 25% | Average win rate of related 2-color archetypes |
+| Top Common Avg | 15% | Average score of top 10 commons |
+| Top Uncommon Avg | 10% | Average score of top 5 uncommons |
+| Bomb Factor | 10% | Quality of rare/mythic bombs |
+| Depth Factor | 5% | Total count of playable cards |
 
 ## Project Structure
 
 ```
 mtg-draft-analyzer/
 ├── config/
-│   └── scoring.yaml          # Configuration
+│   ├── scoring.yaml              # Scoring configuration
+│   └── set_mechanics.yaml        # Set-specific mechanics for LLM
 ├── src/
-│   ├── models/               # Data models (Card, Archetype, Meta)
-│   ├── data/                 # API clients (17lands, Scryfall)
-│   ├── scoring/              # Scoring algorithms
-│   │   ├── card_scorer.py    # Wilson Score + Z-Score
-│   │   ├── color_scorer.py   # Color/Archetype strength
-│   │   ├── irregularity.py   # Sleeper/Trap detection
-│   │   └── calibration.py    # Threshold calibration
-│   ├── analysis/             # Analysis orchestration
-│   ├── report/               # Report generation
-│   │   ├── html_gen.py       # Interactive HTML guide
-│   │   ├── markdown_gen.py   # Markdown report
-│   │   └── json_export.py    # JSON export
-│   ├── llm/                  # LLM integration (Gemini)
-│   └── cli.py                # CLI entry point
+│   ├── models/                   # Data models (Card, Archetype, Meta)
+│   ├── data/                     # API clients (17lands, Scryfall)
+│   ├── scoring/                  # Scoring algorithms
+│   │   ├── card_scorer.py        # Wilson Score + Z-Score
+│   │   ├── color_scorer.py       # Color/Archetype strength
+│   │   ├── irregularity.py       # Sleeper/Trap detection
+│   │   └── calibration.py        # Threshold calibration
+│   ├── analysis/                 # Analysis orchestration
+│   │   ├── color_meta.py         # Main analysis pipeline
+│   │   └── trophy_analyzer.py    # Trophy deck analysis
+│   ├── report/                   # Report generation
+│   │   ├── html_gen.py           # Multi-page HTML guide
+│   │   ├── markdown_gen.py       # Markdown report
+│   │   └── json_export.py        # JSON export
+│   ├── llm/                      # LLM integration (Gemini)
+│   └── cli.py                    # CLI entry point
 ├── templates/
-│   └── draft_guide.html.j2   # HTML template
-├── tests/                    # Test suite
-└── output/                   # Generated reports (gitignored)
+│   ├── guide_base.html.j2        # Base template with navigation
+│   ├── guide_overview.html.j2    # Overview page
+│   ├── guide_archetypes.html.j2  # Archetypes page
+│   ├── guide_cards.html.j2       # Card database page
+│   ├── guide_special.html.j2     # Special cards page
+│   └── static/
+│       ├── guide.css             # Shared CSS
+│       └── guide.js              # Shared JavaScript
+├── tests/                        # Test suite
+└── output/                       # Generated reports (gitignored)
 ```
 
 ## API Data Sources
 
-- **17lands**: Card ratings, color ratings, archetype data, play/draw statistics
+- **17lands**: Card ratings, color ratings, archetype data, play/draw statistics, trophy decks
 - **Scryfall**: Card images and metadata
 - **Gemini**: Strategic analysis and interpretation (optional)
 
 ## Screenshots
 
-### Interactive HTML Guide
-- Card filtering by grade, rarity, color
-- Search functionality
-- Click-to-view card modal with detailed stats
-- Archetype tabs with key cards
-- Sleeper & Trap card highlighting
+### Multi-Page HTML Guide
+
+- **Overview**: Format speed analysis, stat cards, AI strategic insights
+- **Archetypes**: Tier list with win rates, detailed tabs for each archetype
+- **Card Database**: Filter by grade, rarity, color; search functionality; click-to-view modal
+- **Special Cards**: Sleeper and trap cards with deviation scores
+
+### Mobile Responsive
+
+- Centered card modals (not bottom sheet)
+- Horizontal scrolling navigation
+- Touch-friendly filter buttons
 
 ## License
 

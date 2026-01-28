@@ -39,11 +39,13 @@ calibration:
 # Color Strength Calculation
 color_strength:
   weights:
-    top_common_avg: 0.30      # Average of top 10 commons
-    top_uncommon_avg: 0.25    # Average of top 5 uncommons
-    bomb_factor: 0.20         # Rare/Mythic power level
-    archetype_success: 0.15   # Color pair win rates
-    depth_factor: 0.10        # Number of playable cards
+    deck_wr_strength: 0.30    # Direct deck win rate performance
+    archetype_success: 0.20   # Color pair win rates (now includes 3-color)
+    usage_rate: 0.15          # How often this color is played
+    top_common_avg: 0.15      # Average of top 10 commons
+    top_uncommon_avg: 0.10    # Average of top 5 uncommons
+    bomb_factor: 0.05         # Rare/Mythic power level
+    depth_factor: 0.05        # Number of playable cards
 
   # Top N cards to consider
   top_n:

@@ -183,6 +183,7 @@ class ColorStrength:
     # Component scores
     deck_wr_strength: float = 0.0
     archetype_success: float = 0.0
+    usage_rate: float = 0.0  # NEW: How often this color is played
     top_common_avg: float = 0.0
     top_uncommon_avg: float = 0.0
     bomb_factor: float = 0.0
@@ -206,6 +207,7 @@ class ColorStrength:
             "components": {
                 "deck_wr_strength": round(self.deck_wr_strength, 2),
                 "archetype_success": round(self.archetype_success, 2),
+                "usage_rate": round(self.usage_rate, 2),
                 "top_common_avg": round(self.top_common_avg, 2),
                 "top_uncommon_avg": round(self.top_uncommon_avg, 2),
                 "bomb_factor": round(self.bomb_factor, 2),

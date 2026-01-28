@@ -93,6 +93,8 @@ class GeminiClient:
         """
         Generate meta analysis for a snapshot.
 
+        DEPRECATED: Use generate_color_strategy() instead.
+
         Args:
             snapshot: MetaSnapshot to analyze
 
@@ -101,6 +103,26 @@ class GeminiClient:
         """
         prompt = self.prompt_builder.build_meta_prompt(snapshot)
         logger.info(f"Generating meta analysis for {snapshot.expansion}")
+
+        return self._generate(prompt)
+
+    def generate_color_strategy(self, snapshot: MetaSnapshot) -> Optional[str]:
+        """
+        Generate color strategy analysis (replaces analyze_meta).
+
+        This produces detailed analysis for all 5 colors with:
+        - Strengths and weaknesses
+        - Top 3 commons per color
+        - P1P1 color priority
+
+        Args:
+            snapshot: MetaSnapshot to analyze
+
+        Returns:
+            Color strategy analysis text or None
+        """
+        prompt = self.prompt_builder.build_color_strategy_prompt(snapshot)
+        logger.info(f"Generating color strategy for {snapshot.expansion}")
 
         return self._generate(prompt)
 
@@ -233,21 +255,23 @@ class GeminiClient:
     def enrich_snapshot(
         self,
         snapshot: MetaSnapshot,
-        include_meta: bool = True,
+        include_color_strategy: bool = True,
         include_strategy: bool = True,
         include_format_overview: bool = True,
         use_split_api: bool = True,
+        include_meta: bool = False,  # DEPRECATED: kept for backwards compatibility
     ) -> MetaSnapshot:
         """
         Enrich snapshot with LLM analysis.
 
         Args:
             snapshot: MetaSnapshot to enrich
-            include_meta: Whether to include meta analysis
+            include_color_strategy: Whether to include color strategy analysis (5 colors + P1P1)
             include_strategy: Whether to include strategy tips
             include_format_overview: Whether to include format overview
             use_split_api: Whether to use split API calls for format overview
                            (recommended to avoid token truncation)
+            include_meta: DEPRECATED - use include_color_strategy instead
 
         Returns:
             Enriched snapshot
@@ -256,6 +280,11 @@ class GeminiClient:
             logger.warning("Skipping LLM enrichment (client disabled)")
             return snapshot
 
+        # Color strategy analysis (replaces meta_analysis)
+        if include_color_strategy:
+            snapshot.llm_color_strategy = self.generate_color_strategy(snapshot)
+
+        # DEPRECATED: backwards compatibility
         if include_meta:
             snapshot.llm_meta_analysis = self.analyze_meta(snapshot)
 

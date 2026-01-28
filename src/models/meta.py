@@ -120,6 +120,7 @@ class SplashIndicator:
     """Splash viability indicators based on mana fixing quality.
 
     Uses dual land pick rates and mana fixer performance.
+    Now also validates splash label against actual 3-color performance data.
     """
 
     # Splash classification
@@ -136,6 +137,11 @@ class SplashIndicator:
     dual_land_count: int = 0
     mana_fixer_count: int = 0
 
+    # NEW: Performance validation against actual 3-color data
+    performance_validation: str = ""  # "양호", "저조", "보통", "데이터 부족"
+    positive_splash_count: int = 0    # Number of splash variants with positive delta
+    negative_splash_count: int = 0    # Number of splash variants with negative delta
+
     # Strategy recommendation
     recommendation: str = ""
 
@@ -148,6 +154,9 @@ class SplashIndicator:
             "fixer_wr_premium": round(self.fixer_wr_premium, 4),
             "dual_land_count": self.dual_land_count,
             "mana_fixer_count": self.mana_fixer_count,
+            "performance_validation": self.performance_validation,
+            "positive_splash_count": self.positive_splash_count,
+            "negative_splash_count": self.negative_splash_count,
             "recommendation": self.recommendation,
         }
 
@@ -186,7 +195,8 @@ class MetaSnapshot:
     trophy_stats: Optional["TrophyStats"] = None
 
     # LLM analysis (optional)
-    llm_meta_analysis: Optional[str] = None
+    llm_meta_analysis: Optional[str] = None  # DEPRECATED: use llm_color_strategy
+    llm_color_strategy: Optional[str] = None  # 🎨 색상 전략 (5색 분석 + P1P1)
     llm_strategy_tips: Optional[str] = None
     llm_format_overview: Optional[str] = None
     # Parsed sections from format_overview
@@ -263,7 +273,8 @@ class MetaSnapshot:
             "trap_cards": [c.to_dict() for c in self.trap_cards[:10]],
             "no_data_cards": [c.to_dict() for c in self.no_data_cards],
             "llm_analysis": {
-                "meta_analysis": self.llm_meta_analysis,
+                "color_strategy": self.llm_color_strategy,  # 🎨 색상 전략
+                "meta_analysis": self.llm_meta_analysis,  # DEPRECATED
                 "strategy_tips": self.llm_strategy_tips,
                 "format_overview": self.llm_format_overview,
                 "format_characteristics": self.llm_format_characteristics,

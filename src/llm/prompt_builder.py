@@ -30,15 +30,53 @@ Please provide analysis on:
 1. **Meta Summary**: What defines this draft format? Is it fast/slow? Synergy-driven or value-driven?
 
 2. **🎨 Color Strategy (색상 전략)**:
-   - 강한 색상 2개와 **구체적 이유** (폭탄 강도, 깊이, 커먼 품질)
-   - 약한 색상과 피해야 할 상황
-   - **P1P1 색상 우선순위** (Pack 1 Pick 1에서 어떤 색상 카드를 우선해야 하는가)
-
-3. **Top Archetypes**: What makes the best archetypes successful? Key strategies for each.
+   - **모든 5개 색상** (W, U, B, R, G) 각각에 대해 분석
+   - 각 색상별: 강점, 약점, 상위 커먼 3장
+   - **P1P1 색상 우선순위** (Pack 1 Pick 1에서 어떤 색상 카드를 우선해야 하는가와 그 이유)
 
 Please be specific and actionable. Reference actual card names and win rates where helpful.
 
 **중요**: 모든 분석 결과를 한글로 작성해주세요. 단, 카드 이름, 색깔 약어(W, U, B, R, G), 아키타입 이름(Selesnya, Golgari 등)은 영어 원문을 유지합니다.
+
+⚠️ **출력 형식 주의**:
+- 서론/인사말 없이 바로 분석 내용으로 시작
+- "분석해 드리겠습니다", "살펴보겠습니다", "제시된 데이터를 바탕으로" 등 문구 금지
+- 마무리 문구 없이 분석 완료 후 바로 종료
+- "도움이 되셨으면", "추가 질문이 있으시면" 등 마무리 문구 금지
+'''
+
+
+COLOR_STRATEGY_PROMPT = '''You are an expert MTG draft analyst. Analyze the following color data for {expansion} {format}.
+
+## Color Rankings (by strength)
+{color_rankings}
+
+## Top Archetypes (by win rate)
+{archetype_rankings}
+
+## Top Performing Cards
+{top_cards}
+
+## Color Details
+{color_details}
+
+---
+
+Please provide analysis on:
+
+**🎨 Color Strategy (색상 전략)**:
+- **모든 5개 색상** (W, U, B, R, G) 각각에 대해 분석
+- 각 색상별: 강점, 약점, 상위 커먼 3장
+- **P1P1 색상 우선순위** (Pack 1 Pick 1에서 어떤 색상 카드를 우선해야 하는가와 그 이유)
+
+Please be specific and actionable. Reference actual card names and win rates where helpful.
+
+**중요**: 모든 분석 결과를 한글로 작성해주세요. 단, 카드 이름, 색깔 약어(W, U, B, R, G), 아키타입 이름(Selesnya, Golgari 등)은 영어 원문을 유지합니다.
+
+⚠️ **출력 형식 주의**:
+- 서론/인사말 없이 바로 분석 내용으로 시작
+- "분석해 드리겠습니다", "살펴보겠습니다" 등 문구 금지
+- 마무리 문구 없이 분석 완료 후 바로 종료
 '''
 
 
@@ -143,15 +181,12 @@ FORMAT_OVERVIEW_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
 
 
 FORMAT_CHARACTERISTICS_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
-다음 데이터를 분석하여 **포맷 특성**에 대한 심층 인사이트를 제공해주세요.
+다음 데이터를 분석하여 **포맷 특성**에 대한 인사이트를 제공해주세요.
 
 ## 핵심 질문 (반드시 답변)
-1. 이 포맷의 **속도**는? (데이터 기반 근거 제시)
-2. 각 색상의 **강점/약점**은? (단순히 "강하다"가 아니라 구체적 이유)
+1. 이 포맷을 정의하는 핵심 특징은?
+2. 이 포맷의 **속도**는? (데이터 기반 근거 제시)
 3. 스플래시가 **언제 적합한가**?
-
-⚠️ **중요**: 데이터에 없는 내용은 추측하지 마세요.
-세트 메커니즘은 참고용으로만 사용하고, 카드 수/레어도에 비례하여 언급하세요.
 
 {set_mechanics}
 
@@ -159,50 +194,52 @@ FORMAT_CHARACTERISTICS_PROMPT = '''당신은 MTG 드래프트 전문가입니다
 - 세트: {expansion} ({format})
 - 게임 수: {total_games:,}판
 
-## 포맷 속도
+### 아키타입 순위
+{archetype_rankings}
+
+### 포맷 속도
 - Tempo Ratio: {tempo_ratio:.3f} (OH WR / GD WR)
 - Speed: {speed_label}
 - Aggro Advantage: {aggro_advantage:.3f}
 - Low CMC WR (≤2): {low_cmc_wr:.2%} vs High CMC WR (≥5): {high_cmc_wr:.2%}
 - 갈등 감지: {conflicts}
 
-## 스플래시 분석
+### 스플래시 분석
 - Splash Viability: {splash_label}
 - Dual Land Count: {dual_land_count}장
 - Dual Land ALSA: {dual_land_alsa:.1f}
 - Fixer WR Premium: {fixer_wr_premium:.2%}
 
-## 색상 분석 (상세)
-{color_details}
-
 ---
 
-## 출력 형식: 📋 포맷 특성 (왜 이런 메타인가)
+## 출력 형식
 
-다음 내용을 포함해주세요:
+### 1. 📊 메타 요약
+- 이 포맷을 정의하는 핵심 특징 (2-3문장)
+- 시너지 중심 vs 밸류 중심
+- 가장 강력한 아키타입 조합
 
-### 1. 포맷 속도 분석
-- 데이터 기반으로 속도 해석 (aggro vs control)
+### 2. ⏱️ 포맷 속도 분석
+- 데이터 기반 속도 해석 (aggro vs control)
 - tempo_ratio, CMC별 승률의 실전적 의미
 - 속도 갈등이 있다면 그 해석
 
-### 2. 색상별 전략 요약
-- 각 색상의 강점과 약점 (데이터 기반)
-- P1P1(Pack 1 Pick 1)에서 색상 우선순위
-- 피해야 할 색상 조합
-
-### 3. 스플래시 가이드
+### 3. 💧 스플래시 가이드
 - 스플래시가 적합한 상황
 - 듀얼 랜드/픽서 우선순위
 - 스플래시 리스크
 
-### 4. 다른 세트와의 차별점
+### 4. ⭐ 세트 특징
 - 이 세트만의 독특한 특징
 - 드래프트 시 유의사항
 
 ---
 
-한글로 작성하세요 (카드명/색상 약어/아키타입명은 영문 유지).
+**중요**: 한글로 작성 (카드명/색상 약어/아키타입명은 영문 유지).
+
+⚠️ **출력 형식 주의**:
+- 서론 없이 "### 1. 📊 메타 요약"으로 바로 시작
+- 마무리 문구 없이 분석 완료 후 바로 종료
 '''
 
 
@@ -260,6 +297,12 @@ ARCHETYPE_DEEP_DIVE_PROMPT = '''당신은 MTG 드래프트 전문가입니다.
 ---
 
 한글로 작성하세요 (카드명/색상 약어/아키타입명은 영문 유지).
+
+⚠️ **출력 형식 주의**:
+- 서론/인사말 없이 첫 아키타입 분석으로 바로 시작
+- "분석해 드리겠습니다", "살펴보겠습니다", "제시된 데이터를 바탕으로" 등 문구 금지
+- 마무리 문구 없이 분석 완료 후 바로 종료
+- "도움이 되셨으면", "추가 질문이 있으시면" 등 마무리 문구 금지
 '''
 
 
@@ -274,6 +317,11 @@ Format your response as a numbered list of strategic tips. Each tip should be:
 - Backed by the data provided
 
 **중요**: 팁을 한글로 작성해주세요. 카드 이름과 아키타입 이름은 영어로 유지합니다.
+
+⚠️ **출력 형식 주의**:
+- 서론/인사말 없이 바로 1번 팁부터 시작
+- "제공해주신 데이터를 바탕으로", "정리해 드립니다" 등 문구 금지
+- 마무리 문구 없이 마지막 팁 작성 후 바로 종료
 '''
 
 
@@ -288,6 +336,7 @@ class PromptBuilder:
         format_overview_template: Optional[str] = None,
         format_characteristics_template: Optional[str] = None,
         archetype_deep_dive_template: Optional[str] = None,
+        color_strategy_template: Optional[str] = None,
     ):
         """
         Initialize prompt builder.
@@ -299,6 +348,7 @@ class PromptBuilder:
             format_overview_template: Custom format overview template
             format_characteristics_template: Custom format characteristics template
             archetype_deep_dive_template: Custom archetype deep dive template
+            color_strategy_template: Custom color strategy template
         """
         self.meta_template = meta_template or META_ANALYSIS_PROMPT
         self.card_template = card_template or CARD_ANALYSIS_PROMPT
@@ -306,6 +356,7 @@ class PromptBuilder:
         self.format_overview_template = format_overview_template or FORMAT_OVERVIEW_PROMPT
         self.format_characteristics_template = format_characteristics_template or FORMAT_CHARACTERISTICS_PROMPT
         self.archetype_deep_dive_template = archetype_deep_dive_template or ARCHETYPE_DEEP_DIVE_PROMPT
+        self.color_strategy_template = color_strategy_template or COLOR_STRATEGY_PROMPT
 
     def build_meta_prompt(self, snapshot: MetaSnapshot) -> str:
         """Build meta analysis prompt from snapshot."""
@@ -411,6 +462,47 @@ class PromptBuilder:
             top_archetypes=top_archetypes,
         )
 
+    def build_color_strategy_prompt(self, snapshot: MetaSnapshot) -> str:
+        """Build color strategy prompt (META_ANALYSIS style).
+
+        This generates detailed analysis for all 5 colors with:
+        - Strengths and weaknesses
+        - Top 3 commons per color
+        - P1P1 color priority
+        """
+        # Format color rankings
+        color_rankings = "\n".join(
+            f"{i+1}. **{c.color}** - Score: {c.strength_score:.1f}, "
+            f"Playables: {c.playable_count}"
+            for i, c in enumerate(snapshot.top_colors)
+        )
+
+        # Format archetype rankings
+        archetype_rankings = "\n".join(
+            f"{i+1}. **{a.guild_name}** ({a.colors}) - "
+            f"WR: {a.win_rate:.2%}, Score: {a.strength_score:.1f}"
+            for i, a in enumerate(snapshot.top_archetypes[:10])
+        )
+
+        # Format top cards
+        top_cards = "\n".join(
+            f"- **{c.name}** ({c.colors}, {c.rarity.value}) - "
+            f"Grade: {c.grade}, GIH WR: {c.stats.gih_wr:.2%}"
+            for c in snapshot.top_cards[:15]
+        )
+
+        # Format detailed color data (with top commons/uncommons)
+        color_details = self._format_color_details(snapshot.top_colors)
+
+        return self.color_strategy_template.format(
+            expansion=snapshot.expansion,
+            format=snapshot.format,
+            color_rankings=color_rankings,
+            archetype_rankings=archetype_rankings,
+            top_cards=top_cards,
+            color_details=color_details,
+        )
+
     def build_format_overview_prompt(self, snapshot: MetaSnapshot) -> str:
         """Build comprehensive format overview prompt with detailed insight data."""
         # Format speed data (with defaults for missing data)
@@ -465,7 +557,7 @@ class PromptBuilder:
         """Build format characteristics prompt (section 1 only).
 
         This generates the "📋 포맷 특성" section independently to avoid
-        token truncation issues.
+        token truncation issues. No color analysis - that's in COLOR_STRATEGY.
         """
         # Format speed data (with defaults for missing data)
         fs = snapshot.format_speed
@@ -483,8 +575,12 @@ class PromptBuilder:
         dual_land_alsa = si.dual_land_alsa if si else 7.0
         fixer_wr_premium = si.fixer_wr_premium if si else 0.0
 
-        # Format detailed color data
-        color_details = self._format_color_details(snapshot.top_colors)
+        # Format archetype rankings for meta summary
+        archetype_rankings = "\n".join(
+            f"{i+1}. **{a.guild_name}** ({a.colors}) - "
+            f"WR: {a.win_rate:.2%}, Share: {a.meta_share:.1%}"
+            for i, a in enumerate(snapshot.top_archetypes[:10])
+        )
 
         # Get set mechanics if available
         set_mechanics = get_set_mechanics(snapshot.expansion)
@@ -494,6 +590,7 @@ class PromptBuilder:
             format=snapshot.format,
             total_games=snapshot.total_games_analyzed,
             set_mechanics=set_mechanics,
+            archetype_rankings=archetype_rankings,
             tempo_ratio=tempo_ratio,
             speed_label=speed_label,
             aggro_advantage=aggro_advantage,
@@ -504,7 +601,6 @@ class PromptBuilder:
             dual_land_count=dual_land_count,
             dual_land_alsa=dual_land_alsa,
             fixer_wr_premium=fixer_wr_premium,
-            color_details=color_details,
         )
 
     def build_archetype_deep_dive_prompt(self, snapshot: MetaSnapshot) -> str:
@@ -612,11 +708,22 @@ class PromptBuilder:
             trap_cards = ", ".join(a.trap_cards[:3]) if a.trap_cards else "N/A"
             synergy_cards = ", ".join(a.synergy_cards[:3]) if a.synergy_cards else "N/A"
             signpost = a.signpost_uncommon or "N/A"
+
+            # Format splash variant data
+            variant_info = "없음"
+            if hasattr(a, 'variants') and a.variants:
+                variant_lines = []
+                for v in a.variants[:3]:  # Top 3 splash variants
+                    delta = f"+{v.win_rate_delta*100:.1f}" if v.win_rate_delta > 0 else f"{v.win_rate_delta*100:.1f}"
+                    variant_lines.append(f"+{v.added_color}: {v.win_rate:.1%} ({delta}%p)")
+                variant_info = ", ".join(variant_lines)
+
             lines.append(f"""### {a.guild_name} ({a.colors}) - Rank #{a.rank}
 **⚠️ 이 아키타입 고유 전략** (다른 아키타입과 다름)
 - 승률: {a.win_rate:.2%}
 - 메타 점유율: {a.meta_share:.1%}
 - 시너지 리프트: {a.synergy_lift:.2%} (표준편차: {a.synergy_std:.3f})
+- 스플래시 옵션: {variant_info}
 - Signpost: {signpost}
 - 핵심 커먼: {key_commons}
 - 시너지 카드 (이 아키타입 전용): {synergy_cards}
@@ -715,3 +822,9 @@ def build_archetype_deep_dive_prompt(snapshot: MetaSnapshot) -> str:
     """Convenience function to build archetype deep dive prompt."""
     builder = PromptBuilder()
     return builder.build_archetype_deep_dive_prompt(snapshot)
+
+
+def build_color_strategy_prompt(snapshot: MetaSnapshot) -> str:
+    """Convenience function to build color strategy prompt."""
+    builder = PromptBuilder()
+    return builder.build_color_strategy_prompt(snapshot)

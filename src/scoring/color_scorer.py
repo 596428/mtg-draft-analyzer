@@ -24,11 +24,12 @@ class ColorScorer:
     """Calculates strength scores for colors and archetypes."""
 
     DEFAULT_WEIGHTS = {
-        "deck_wr_strength": 0.35,
-        "archetype_success": 0.25,
+        "deck_wr_strength": 0.30,
+        "archetype_success": 0.20,  # Now includes 3-color archetypes
+        "usage_rate": 0.15,         # NEW: How often color is played
         "top_common_avg": 0.15,
         "top_uncommon_avg": 0.10,
-        "bomb_factor": 0.10,
+        "bomb_factor": 0.05,
         "depth_factor": 0.05,
     }
 
@@ -232,22 +233,32 @@ class ColorScorer:
         # Calculate deck WR strength (direct performance indicator)
         deck_wr_strength = self._calculate_deck_wr_strength(color, color_cards)
 
-        # Calculate archetype success (average of color pairs containing this color)
+        # Calculate archetype success (average of ALL color pairs containing this color)
+        # Fixed: Now includes 3-color archetypes, not just 2-color pairs
         archetype_success = 0.0
         if color_pairs:
             relevant_pairs = [
                 cp for cp in color_pairs
-                if color in cp.colors and len(cp.colors) == 2
+                if color in cp.colors  # Include all archetypes with this color
             ]
             if relevant_pairs:
                 archetype_success = (
                     statistics.mean(cp.win_rate for cp in relevant_pairs) * 100
                 )
 
+        # Calculate usage_rate (how often this color is played)
+        usage_rate = 0.0
+        if color_pairs:
+            color_pairs_with_color = [cp for cp in color_pairs if color in cp.colors]
+            total_games = sum(cp.games for cp in color_pairs)
+            color_games = sum(cp.games for cp in color_pairs_with_color)
+            usage_rate = (color_games / total_games * 100) if total_games > 0 else 0
+
         # Calculate weighted strength score
         strength = (
             self.weights.get("deck_wr_strength", 0) * deck_wr_strength +
             self.weights.get("archetype_success", 0) * archetype_success +
+            self.weights.get("usage_rate", 0) * usage_rate +
             self.weights["top_common_avg"] * top_common_avg +
             self.weights["top_uncommon_avg"] * top_uncommon_avg +
             self.weights["bomb_factor"] * bomb_factor +
@@ -264,6 +275,7 @@ class ColorScorer:
             strength_score=strength,
             deck_wr_strength=deck_wr_strength,
             archetype_success=archetype_success,
+            usage_rate=usage_rate,
             top_common_avg=top_common_avg,
             top_uncommon_avg=top_uncommon_avg,
             bomb_factor=bomb_factor,

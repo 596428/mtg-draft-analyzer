@@ -393,12 +393,21 @@ def calculate_format_speed(
     )
 
 
-def calculate_splash_indicator(cards: list[Card]) -> SplashIndicator:
+def calculate_splash_indicator(
+    cards: list[Card],
+    variants_map: dict[str, list] | None = None,
+) -> SplashIndicator:
     """Calculate splash viability indicators.
 
     Uses:
     - Dual land ALSA and pick rate
     - Mana fixer win rate premium
+    - Actual 3-color performance data (if variants_map provided)
+
+    Args:
+        cards: All cards in the set
+        variants_map: Dict mapping archetype colors to their SplashVariant list
+                      e.g., {"WU": [SplashVariant(colors="WUB", ...)], ...}
     """
     # Identify dual lands and mana fixers
     dual_lands = [c for c in cards if is_dual_land(c)]
@@ -431,6 +440,25 @@ def calculate_splash_indicator(cards: list[Card]) -> SplashIndicator:
         fixer_wr_premium = fixer_avg_wr - format_avg_wr
     else:
         fixer_wr_premium = 0.0
+
+    # NEW: Validate splash label against actual 3-color performance data
+    performance_validation = "데이터 부족"
+    positive_splash_count = 0
+    negative_splash_count = 0
+
+    if variants_map:
+        # Collect all splash variants from all archetypes
+        all_variants = [v for vs in variants_map.values() for v in vs]
+        if all_variants:
+            positive_splash_count = sum(1 for v in all_variants if v.win_rate_delta > 0)
+            negative_splash_count = sum(1 for v in all_variants if v.win_rate_delta < 0)
+
+            if positive_splash_count > negative_splash_count * 1.5:
+                performance_validation = "양호"
+            elif negative_splash_count > positive_splash_count:
+                performance_validation = "저조"
+            else:
+                performance_validation = "보통"
 
     # Determine splash label based on dual land availability and demand
     # Primary factor: dual_land_count (availability)
@@ -474,6 +502,11 @@ def calculate_splash_indicator(cards: list[Card]) -> SplashIndicator:
             splash_label = "낮음"
             recommendation = "2색 집중 권장, 스플래시 주의"
 
+    # Append performance validation to recommendation if data available
+    if performance_validation != "데이터 부족":
+        perf_note = f" (실제 3색 성과: {performance_validation}, +{positive_splash_count}/-{negative_splash_count})"
+        recommendation += perf_note
+
     return SplashIndicator(
         splash_label=splash_label,
         dual_land_alsa=dual_land_alsa,
@@ -481,6 +514,9 @@ def calculate_splash_indicator(cards: list[Card]) -> SplashIndicator:
         fixer_wr_premium=fixer_wr_premium,
         dual_land_count=len(dual_lands),
         mana_fixer_count=len(mana_fixers),
+        performance_validation=performance_validation,
+        positive_splash_count=positive_splash_count,
+        negative_splash_count=negative_splash_count,
         recommendation=recommendation,
     )
 
@@ -731,7 +767,7 @@ class MetaAnalyzer:
         # Fetch play/draw stats for direct speed metrics
         play_draw_data = self.loader.fetch_play_draw_stats(expansion, format)
         format_speed = calculate_format_speed(scored_cards, play_draw_data)
-        splash_indicator = calculate_splash_indicator(scored_cards)
+        splash_indicator = calculate_splash_indicator(scored_cards, variants_map)
 
         # Build snapshot
         snapshot = MetaSnapshot(

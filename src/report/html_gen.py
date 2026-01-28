@@ -312,7 +312,7 @@ class HtmlReportGenerator:
             "grade_order": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F"],
 
             # LLM analysis (optional)
-            "llm_analysis": snapshot.llm_meta_analysis if include_llm else None,
+            "llm_color_strategy": snapshot.llm_color_strategy if include_llm else None,  # 🎨 색상 전략
             "llm_strategy": snapshot.llm_strategy_tips if include_llm else None,
             "llm_format_overview": snapshot.llm_format_overview if include_llm else None,
             # Parsed sections for reordering

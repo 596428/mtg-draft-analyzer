@@ -2084,19 +2084,19 @@
                 {% endif %}
             </div>
 
-            {% if llm_format_characteristics or llm_analysis or llm_archetype_deep_dive %}
+            {% if llm_format_characteristics or llm_color_strategy or llm_archetype_deep_dive %}
             <div class="format-analysis">
                 <h3>🤖 AI Analysis</h3>
                 <div class="analysis-content">
-                    {# 1. 📋 포맷 특성 (왜 이런 메타인가) #}
+                    {# 1. 📋 포맷 특성 (메타요약 + 속도 + 스플래시 + 세트특징) #}
                     {% if llm_format_characteristics %}
                     {{ llm_format_characteristics | markdown }}
                     {% endif %}
 
-                    {# 2. ECL PremierDraft 메타 분석 (Meta Summary + 🎨 Color Strategy + Top Archetypes) #}
-                    {% if llm_analysis %}
+                    {# 2. 🎨 색상 전략 (5색 분석 + P1P1 + 상위 커먼) #}
+                    {% if llm_color_strategy %}
                     <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
-                    {{ llm_analysis | markdown }}
+                    {{ llm_color_strategy | markdown }}
                     {% endif %}
 
                     {# 3. 🏆 상위 아키타입 심층 분석 #}
@@ -2123,6 +2123,44 @@
         </section>
 
         <!-- ==========================================
+             COLOR STRENGTH (Single Color Rankings)
+             ========================================== -->
+        <section id="color-strength">
+            <h2>🎨 Single Color Strength</h2>
+            <div class="color-grid">
+                {% for color in color_strengths %}
+                <div class="color-card" data-color="{{ color.color }}">
+                    <div class="color-icon">{{ color_icons.get(color.color, '⬜') }}</div>
+                    <div class="color-name">{{ color_names.get(color.color, color.color) }}</div>
+                    <div class="rank">#{{ color.rank }}</div>
+                    <div class="score">{{ "%.1f" | format(color.strength_score) }}</div>
+
+                    <!-- Color Metrics (bomb/depth) -->
+                    <div class="color-metrics">
+                        <span class="metric" title="Bomb Factor: How strong are the top cards">💣 {{ "%.0f" | format(color.bomb_factor | default(0)) }}%</span>
+                        <span class="metric" title="Pool Depth: How many playables in this color">📊 {{ "%.0f" | format(color.depth_factor | default(0)) }}%</span>
+                    </div>
+
+                    {% if color.top_commons %}
+                    <ul class="top-cards">
+                        <li><strong>Top Commons:</strong></li>
+                        {% for card_name in color.top_commons[:3] %}
+                        <li>• {{ card_name }}</li>
+                        {% endfor %}
+                        {% if color.top_uncommons %}
+                        <li style="margin-top: 8px;"><strong>Top Uncommons:</strong></li>
+                        {% for card_name in color.top_uncommons[:3] %}
+                        <li>• {{ card_name }}</li>
+                        {% endfor %}
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- ==========================================
              ARCHETYPE TIER LIST
              ========================================== -->
         <section id="archetype-tier-list">
@@ -2130,7 +2168,7 @@
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
                 Archetypes with >2.0% meta share. Click to view details.
             </p>
-            
+
             <table class="tier-list-table">
                 <thead>
                     <tr>
@@ -2183,44 +2221,6 @@
         </section>
 
         <!-- ==========================================
-             COLOR STRENGTH (Old Color Rankings)
-             ========================================== -->
-        <section id="color-strength">
-            <h2>🎨 Single Color Strength</h2>
-            <div class="color-grid">
-                {% for color in color_strengths %}
-                <div class="color-card" data-color="{{ color.color }}">
-                    <div class="color-icon">{{ color_icons.get(color.color, '⬜') }}</div>
-                    <div class="color-name">{{ color_names.get(color.color, color.color) }}</div>
-                    <div class="rank">#{{ color.rank }}</div>
-                    <div class="score">{{ "%.1f" | format(color.strength_score) }}</div>
-
-                    <!-- Color Metrics (bomb/depth) -->
-                    <div class="color-metrics">
-                        <span class="metric" title="Bomb Factor: How strong are the top cards">💣 {{ "%.0f" | format(color.bomb_factor | default(0)) }}%</span>
-                        <span class="metric" title="Pool Depth: How many playables in this color">📊 {{ "%.0f" | format(color.depth_factor | default(0)) }}%</span>
-                    </div>
-
-                    {% if color.top_commons %}
-                    <ul class="top-cards">
-                        <li><strong>Top Commons:</strong></li>
-                        {% for card_name in color.top_commons[:3] %}
-                        <li>• {{ card_name }}</li>
-                        {% endfor %}
-                        {% if color.top_uncommons %}
-                        <li style="margin-top: 8px;"><strong>Top Uncommons:</strong></li>
-                        {% for card_name in color.top_uncommons[:3] %}
-                        <li>• {{ card_name }}</li>
-                        {% endfor %}
-                        {% endif %}
-                    </ul>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-
-        <!-- ==========================================
              ARCHETYPE GUIDE
              ========================================== -->
         <section id="archetypes">
@@ -2267,6 +2267,98 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    {# Trophy Analysis Section - FIRST in archetype details #}
+                    {% if trophy_stats %}
+                    {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
+                    {% if trophy_arch and trophy_arch.trophy_count > 0 %}
+                    <div class="trophy-section">
+                        <h4>🏆 7승 덱 분석 ({{ trophy_arch.trophy_count }}개)</h4>
+
+                        {# Combined metrics + CMC curve in single row #}
+                        <div class="trophy-stats-row">
+                            <div class="trophy-metrics-compact">
+                                <div class="trophy-metric">
+                                    <span class="metric-label">평균 CMC</span>
+                                    <span class="metric-value">{{ trophy_arch.avg_cmc | round(2) }}</span>
+                                </div>
+                                <div class="trophy-metric">
+                                    <span class="metric-label">생물 카드 평균</span>
+                                    <span class="metric-value">{{ trophy_arch.avg_creature_count | round(1) }}장</span>
+                                </div>
+                                {% if trophy_arch.splash_rate %}
+                                <div class="trophy-metric">
+                                    <span class="metric-label">스플래시</span>
+                                    <span class="metric-value">{{ (trophy_arch.splash_rate * 100) | round }}%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {# CMC Distribution Bar Chart - inline #}
+                            {% if trophy_arch.cmc_distribution %}
+                            <div class="cmc-curve-inline">
+                                <span class="cmc-label">Mana Curve:</span>
+                                {% set cmc_values = [trophy_arch.cmc_distribution.get('1', 0), trophy_arch.cmc_distribution.get('2', 0), trophy_arch.cmc_distribution.get('3', 0), trophy_arch.cmc_distribution.get('4', 0), trophy_arch.cmc_distribution.get('5', 0), trophy_arch.cmc_distribution.get('6+', 0)] %}
+                                {% set max_cmc = cmc_values | max %}
+                                {% set total_cmc = cmc_values | sum %}
+                                {% for cmc_label in ['1', '2', '3', '4', '5', '6+'] %}
+                                {% set cmc_count = trophy_arch.cmc_distribution.get(cmc_label, 0) %}
+                                {% set avg_cards = ((cmc_count / total_cmc) * 23) | round(1) if total_cmc > 0 else 0 %}
+                                <div class="cmc-bar">
+                                    <div class="cmc-bar-fill" style="height: {{ ((cmc_count / max_cmc) * 35) if max_cmc > 0 else 3 }}px;"></div>
+                                    <span class="cmc-bar-label">{{ cmc_label }}</span>
+                                    <span class="cmc-bar-count">{{ avg_cards }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {# Top Cards by Rarity with hover support #}
+                        <div class="trophy-cards-group">
+                            <h5>Mythic / Rare (Top 5)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('mythic', 'rare', n=5) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="trophy-cards-group">
+                            <h5>Uncommon (Top 7)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('uncommon', n=7) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="trophy-cards-group">
+                            <h5>Common (Top 7)</h5>
+                            <div class="trophy-card-list">
+                                {% for card in trophy_arch.top_cards_by_rarity('common', n=7) %}
+                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
+                                <span class="trophy-card-item trophy-card-hover"
+                                      data-card-name="{{ card.name }}"
+                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
+                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
 
                     <h4 style="margin: 20px 0 10px;">Key Cards</h4>
 
@@ -2423,98 +2515,6 @@
                         {% endif %}
                         {% endfor %}
                     </div>
-                    {% endif %}
-
-                    {# Trophy Analysis Section #}
-                    {% if trophy_stats %}
-                    {% set trophy_arch = trophy_stats.get_archetype(arch.colors) %}
-                    {% if trophy_arch and trophy_arch.trophy_count > 0 %}
-                    <div class="trophy-section">
-                        <h4>🏆 7승 덱 분석 ({{ trophy_arch.trophy_count }}개)</h4>
-
-                        {# Combined metrics + CMC curve in single row #}
-                        <div class="trophy-stats-row">
-                            <div class="trophy-metrics-compact">
-                                <div class="trophy-metric">
-                                    <span class="metric-label">평균 CMC</span>
-                                    <span class="metric-value">{{ trophy_arch.avg_cmc | round(2) }}</span>
-                                </div>
-                                <div class="trophy-metric">
-                                    <span class="metric-label">생물 카드 평균</span>
-                                    <span class="metric-value">{{ trophy_arch.avg_creature_count | round(1) }}장</span>
-                                </div>
-                                {% if trophy_arch.splash_rate %}
-                                <div class="trophy-metric">
-                                    <span class="metric-label">스플래시</span>
-                                    <span class="metric-value">{{ (trophy_arch.splash_rate * 100) | round }}%</span>
-                                </div>
-                                {% endif %}
-                            </div>
-
-                            {# CMC Distribution Bar Chart - inline #}
-                            {% if trophy_arch.cmc_distribution %}
-                            <div class="cmc-curve-inline">
-                                <span class="cmc-label">Mana Curve:</span>
-                                {% set cmc_values = [trophy_arch.cmc_distribution.get('1', 0), trophy_arch.cmc_distribution.get('2', 0), trophy_arch.cmc_distribution.get('3', 0), trophy_arch.cmc_distribution.get('4', 0), trophy_arch.cmc_distribution.get('5', 0), trophy_arch.cmc_distribution.get('6+', 0)] %}
-                                {% set max_cmc = cmc_values | max %}
-                                {% set total_cmc = cmc_values | sum %}
-                                {% for cmc_label in ['1', '2', '3', '4', '5', '6+'] %}
-                                {% set cmc_count = trophy_arch.cmc_distribution.get(cmc_label, 0) %}
-                                {% set avg_cards = ((cmc_count / total_cmc) * 23) | round(1) if total_cmc > 0 else 0 %}
-                                <div class="cmc-bar">
-                                    <div class="cmc-bar-fill" style="height: {{ ((cmc_count / max_cmc) * 35) if max_cmc > 0 else 3 }}px;"></div>
-                                    <span class="cmc-bar-label">{{ cmc_label }}</span>
-                                    <span class="cmc-bar-count">{{ avg_cards }}</span>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        {# Top Cards by Rarity with hover support #}
-                        <div class="trophy-cards-group">
-                            <h5>Mythic / Rare (Top 5)</h5>
-                            <div class="trophy-card-list">
-                                {% for card in trophy_arch.top_cards_by_rarity('mythic', 'rare', n=5) %}
-                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
-                                <span class="trophy-card-item trophy-card-hover"
-                                      data-card-name="{{ card.name }}"
-                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
-                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
-                                </span>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div class="trophy-cards-group">
-                            <h5>Uncommon (Top 7)</h5>
-                            <div class="trophy-card-list">
-                                {% for card in trophy_arch.top_cards_by_rarity('uncommon', n=7) %}
-                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
-                                <span class="trophy-card-item trophy-card-hover"
-                                      data-card-name="{{ card.name }}"
-                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
-                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
-                                </span>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div class="trophy-cards-group">
-                            <h5>Common (Top 7)</h5>
-                            <div class="trophy-card-list">
-                                {% for card in trophy_arch.top_cards_by_rarity('common', n=7) %}
-                                {% set full_card = all_cards | selectattr('name', 'equalto', card.name) | first %}
-                                <span class="trophy-card-item trophy-card-hover"
-                                      data-card-name="{{ card.name }}"
-                                      data-card-image="{{ full_card.image_uri if full_card else '' }}">
-                                    {{ card.name }} <span class="card-pct">({{ card.per_deck_pct }}%)</span>
-                                </span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
                     {% endif %}
                 </div>
                 {% endfor %}

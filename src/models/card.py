@@ -172,6 +172,11 @@ class Card:
     image_uri: Optional[str] = None  # Card image URL (normal size)
     scryfall_uri: Optional[str] = None  # Scryfall card page link
 
+    # Hybrid mana related fields
+    is_hybrid: bool = False  # Contains hybrid mana symbols (e.g., {W/R})
+    min_colors_required: set[str] = field(default_factory=set)  # Minimum colors needed to cast
+    hybrid_color_options: list[set[str]] = field(default_factory=list)  # Possible color choices per hybrid symbol
+
     @property
     def name(self) -> str:
         """Card name shortcut."""
@@ -221,6 +226,9 @@ class Card:
             "type_line": self.type_line,
             "image_uri": self.image_uri,
             "scryfall_uri": self.scryfall_uri,
+            # Hybrid mana data
+            "is_hybrid": self.is_hybrid,
+            "min_colors_required": list(self.min_colors_required),
         }
 
     def __repr__(self) -> str:

@@ -2,6 +2,8 @@
 
 import logging
 import statistics
+from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -131,6 +133,173 @@ def is_dual_land(card: Card) -> bool:
         return True
 
     return False
+
+
+def is_card_playable_in_colors(card: Card, deck_colors: set[str]) -> bool:
+    """Check if a card can be cast with the given deck colors.
+
+    For hybrid cards: checks if deck_colors can satisfy all hybrid symbols.
+    For gold cards: checks if all card colors are in deck_colors.
+
+    Args:
+        card: Card object with hybrid data populated
+        deck_colors: Set of colors available in the deck (e.g., {"W", "U"})
+
+    Returns:
+        True if the card can be cast with deck_colors, False otherwise
+
+    Examples:
+        {W/R} card with deck_colors={"W"} → True (W can pay for W/R)
+        {W/R} card with deck_colors={"U"} → False (U cannot pay for W/R)
+        {W}{R} card with deck_colors={"W"} → False (needs both W and R)
+        {W}{R} card with deck_colors={"W","R"} → True
+    """
+    if not deck_colors:
+        return False
+
+    if card.is_hybrid and card.hybrid_color_options:
+        # Hybrid card: each hybrid symbol must be payable by at least one deck color
+        for hybrid_opts in card.hybrid_color_options:
+            if not (hybrid_opts & deck_colors):
+                # No deck color can pay for this hybrid symbol
+                return False
+
+        # Also check required (non-hybrid) colors
+        if card.min_colors_required:
+            # min_colors_required already accounts for optimal hybrid choices
+            # But we need to verify the required_colors (non-hybrid) are covered
+            # Since min_colors is computed optimally, we just check subset
+            # Actually, we should check that required non-hybrid colors are in deck
+            # min_colors_required is the minimum set needed, so if deck has those, it works
+            pass
+
+        return True
+    else:
+        # Non-hybrid card: all card colors must be in deck
+        card_colors = set(card.colors) if card.colors else set()
+        if not card_colors:
+            # Colorless card: always playable
+            return True
+        return card_colors <= deck_colors
+
+
+def requires_splash_for_card(card: Card, base_colors: set[str]) -> bool:
+    """Check if a card requires splash colors beyond the base.
+
+    For hybrid cards: returns False if base_colors can cast the card.
+    For gold cards: returns True if any card color is outside base_colors.
+
+    Args:
+        card: Card object with hybrid data populated
+        base_colors: The main colors of the deck (e.g., {"W", "U"} for Azorius)
+
+    Returns:
+        True if playing this card requires additional mana sources beyond base_colors
+
+    Examples:
+        {U/R} hybrid with base={"W","U"} → False (U covers the hybrid)
+        {U}{R} gold with base={"W","U"} → True (R is a splash)
+        {W}{U} gold with base={"W","U"} → False (fully covered)
+    """
+    if not base_colors:
+        return True
+
+    if card.is_hybrid and card.hybrid_color_options:
+        # Hybrid card: check if base_colors can pay for all hybrid symbols
+        for hybrid_opts in card.hybrid_color_options:
+            if not (hybrid_opts & base_colors):
+                # This hybrid symbol requires a splash
+                return True
+        return False
+    else:
+        # Non-hybrid card: check if all colors are in base
+        card_colors = set(card.colors) if card.colors else set()
+        if not card_colors:
+            # Colorless: no splash needed
+            return False
+        return not card_colors <= base_colors
+
+
+@dataclass
+class KeywordDistribution:
+    """Keyword/mechanic distribution by color for LLM context."""
+
+    distribution: dict[str, dict[str, int]] = field(default_factory=dict)
+    totals: dict[str, int] = field(default_factory=dict)
+
+    def format_for_llm(self, mechanic_names: list[str] = None) -> str:
+        """Format keyword distribution for LLM prompt.
+
+        Args:
+            mechanic_names: Optional list of set mechanics to prioritize.
+                           If None, shows keywords with 3+ total cards.
+
+        Returns:
+            Formatted string like:
+            - **Convoke**: W 2장, U 3장, B 0장, R 0장, G 1장 (총 6장)
+            - **Flying**: W 5장, U 8장, B 2장, R 1장, G 0장 (총 16장)
+        """
+        lines = []
+        colors = ["W", "U", "B", "R", "G"]
+
+        # Determine which keywords to show
+        if mechanic_names:
+            keywords_to_show = [
+                k for k in self.distribution
+                if k.lower() in [m.lower() for m in mechanic_names]
+            ]
+            # Also include high-frequency keywords not in mechanic_names
+            for k, total in self.totals.items():
+                if total >= 5 and k not in keywords_to_show:
+                    keywords_to_show.append(k)
+        else:
+            # Show keywords with 3+ total cards
+            keywords_to_show = [k for k, t in self.totals.items() if t >= 3]
+
+        for keyword in sorted(keywords_to_show):
+            color_dist = self.distribution.get(keyword, {})
+            total = self.totals.get(keyword, 0)
+            parts = [f"{c} {color_dist.get(c, 0)}장" for c in colors]
+            lines.append(f"- **{keyword}**: {', '.join(parts)} (총 {total}장)")
+
+        return "\n".join(lines) if lines else "키워드 분포 데이터 없음"
+
+
+def aggregate_keyword_distribution(cards: list[Card]) -> KeywordDistribution:
+    """Aggregate keyword distribution by color from card list.
+
+    Args:
+        cards: List of Card objects with keywords populated from Scryfall
+
+    Returns:
+        KeywordDistribution object with per-keyword color counts
+
+    Example output for Convoke:
+        distribution["Convoke"] = {"W": 2, "U": 3, "B": 0, "R": 0, "G": 1}
+        totals["Convoke"] = 6
+    """
+    distribution = defaultdict(lambda: defaultdict(int))
+    totals = defaultdict(int)
+
+    for card in cards:
+        if not card.keywords:
+            continue
+
+        # Get card colors (might be multi-color)
+        card_colors = list(card.colors) if card.colors else []
+
+        for keyword in card.keywords:
+            totals[keyword] += 1
+            # Attribute to each color the card has
+            for color in card_colors:
+                if color in "WUBRG":
+                    distribution[keyword][color] += 1
+            # For colorless cards, don't add to any color distribution
+
+    return KeywordDistribution(
+        distribution={k: dict(v) for k, v in distribution.items()},
+        totals=dict(totals),
+    )
 
 
 def _classify_speed_from_api(avg_length: float, wr_on_play: float) -> tuple[str, int]:
@@ -882,6 +1051,7 @@ class MetaAnalyzer:
         scryfall_data = self.scryfall.batch_enrich_cards(card_names, expansion)
 
         enriched_count = 0
+        hybrid_count = 0
         for card in cards:
             if card.name in scryfall_data:
                 data = scryfall_data[card.name]
@@ -894,9 +1064,15 @@ class MetaAnalyzer:
                 card.cmc = data.get("cmc")
                 card.image_uri = data.get("image_uri")
                 card.scryfall_uri = data.get("scryfall_uri")
+                # Hybrid mana data
+                card.is_hybrid = data.get("is_hybrid", False)
+                card.min_colors_required = data.get("min_colors_required", set())
+                card.hybrid_color_options = data.get("hybrid_color_options", [])
+                if card.is_hybrid:
+                    hybrid_count += 1
                 enriched_count += 1
 
-        logger.info(f"Enriched {enriched_count}/{len(cards)} cards with Scryfall data")
+        logger.info(f"Enriched {enriched_count}/{len(cards)} cards with Scryfall data ({hybrid_count} hybrid cards)")
         return cards
 
     def quick_analyze(

@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from src.data.set_metadata import get_set_mechanics
+from src.data.set_metadata import get_mechanic_names, get_set_mechanics
 from src.models.card import Card
 from src.models.meta import MetaSnapshot
 
@@ -209,6 +209,9 @@ FORMAT_CHARACTERISTICS_PROMPT = '''당신은 MTG 드래프트 전문가입니다
 - Dual Land Count: {dual_land_count}장
 - Dual Land ALSA: {dual_land_alsa:.1f}
 - Fixer WR Premium: {fixer_wr_premium:.2%}
+
+### 키워드/메커니즘 색상별 분포
+{keyword_distribution}
 
 ---
 
@@ -585,6 +588,14 @@ class PromptBuilder:
         # Get set mechanics if available
         set_mechanics = get_set_mechanics(snapshot.expansion)
 
+        # Calculate keyword distribution for LLM context
+        # Import here to avoid circular import
+        from src.analysis.color_meta import aggregate_keyword_distribution
+
+        mechanic_names = get_mechanic_names(snapshot.expansion)
+        keyword_dist = aggregate_keyword_distribution(snapshot.all_cards)
+        keyword_distribution_str = keyword_dist.format_for_llm(mechanic_names)
+
         return self.format_characteristics_template.format(
             expansion=snapshot.expansion,
             format=snapshot.format,
@@ -601,6 +612,7 @@ class PromptBuilder:
             dual_land_count=dual_land_count,
             dual_land_alsa=dual_land_alsa,
             fixer_wr_premium=fixer_wr_premium,
+            keyword_distribution=keyword_distribution_str,
         )
 
     def build_archetype_deep_dive_prompt(self, snapshot: MetaSnapshot) -> str:

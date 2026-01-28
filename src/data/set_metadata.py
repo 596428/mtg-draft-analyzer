@@ -384,3 +384,19 @@ def get_set_metadata(expansion: str) -> Optional[SetMetadata]:
     """
     loader = SetMetadataLoader()
     return loader.get_set_metadata(expansion)
+
+
+def get_mechanic_names(expansion: str) -> list[str]:
+    """
+    Get list of mechanic names for a set.
+
+    Args:
+        expansion: Set code (e.g., "ECL", "DSK")
+
+    Returns:
+        List of mechanic names, empty list if set not found
+    """
+    metadata = get_set_metadata(expansion)
+    if not metadata or not metadata.mechanics:
+        return []
+    return [m.name for m in metadata.mechanics]

@@ -1,6 +1,7 @@
 """Scryfall API client for card text and metadata."""
 
 import logging
+import re
 import time
 from typing import Optional
 
@@ -9,6 +10,101 @@ import requests
 from src.data.cache import CacheManager
 
 logger = logging.getLogger(__name__)
+
+# Mana symbol patterns for hybrid detection
+HYBRID_PATTERN = re.compile(r'\{([WUBRG2])/([WUBRG])\}', re.IGNORECASE)
+SINGLE_COLOR_PATTERN = re.compile(r'\{([WUBRG])\}', re.IGNORECASE)
+
+
+def parse_mana_requirements(mana_cost: str) -> dict:
+    """Parse mana cost to extract actual color requirements.
+
+    Distinguishes between hybrid mana (W OR R needed) and gold mana (W AND R needed).
+
+    Args:
+        mana_cost: Mana cost string (e.g., "{3}{W/R}{W/R}" or "{W}{R}")
+
+    Returns:
+        Dict with:
+            - is_hybrid: bool - Contains hybrid mana symbols
+            - required_colors: set[str] - Colors from non-hybrid symbols (must have)
+            - hybrid_options: list[set[str]] - Color choices per hybrid symbol
+            - min_colors: set[str] - Minimum colors needed to cast the spell
+
+    Examples:
+        "{W}{R}" → required={"W","R"}, hybrid_options=[], min={"W","R"}
+        "{W/R}{W/R}" → required=set(), hybrid_options=[{"W","R"},{"W","R"}], min={"W"} or {"R"}
+        "{W}{W/R}" → required={"W"}, hybrid_options=[{"W","R"}], min={"W"}
+        "{3}{W/U}{B/R}" → required=set(), hybrid_options=[{"W","U"},{"B","R"}], min={"W","B"} or similar
+    """
+    if not mana_cost:
+        return {
+            "is_hybrid": False,
+            "required_colors": set(),
+            "hybrid_options": [],
+            "min_colors": set(),
+        }
+
+    # Remove hybrid symbols from consideration for required colors
+    # by temporarily replacing them
+    temp_cost = HYBRID_PATTERN.sub('', mana_cost)
+
+    # 1. Extract required colors (non-hybrid single color symbols)
+    required_colors = set()
+    for match in SINGLE_COLOR_PATTERN.finditer(temp_cost):
+        color = match.group(1).upper()
+        if color in "WUBRG":
+            required_colors.add(color)
+
+    # 2. Extract hybrid options
+    hybrid_options = []
+    for match in HYBRID_PATTERN.finditer(mana_cost):
+        left, right = match.group(1).upper(), match.group(2).upper()
+        options = set()
+        if left in "WUBRG":
+            options.add(left)
+        if right in "WUBRG":
+            options.add(right)
+        if options:
+            hybrid_options.append(options)
+
+    is_hybrid = len(hybrid_options) > 0
+
+    # 3. Calculate minimum colors needed
+    if not hybrid_options:
+        # No hybrid symbols: required_colors is the answer
+        min_colors = required_colors.copy()
+    else:
+        # With hybrid symbols: find minimum color set that satisfies all hybrid requirements
+        # Strategy: For each hybrid, we can choose one color. Find the choice that
+        # minimizes total colors needed (preferring colors already in required_colors).
+
+        min_colors = required_colors.copy()
+
+        for hybrid_opts in hybrid_options:
+            # Check if any existing color in min_colors can cover this hybrid
+            if min_colors & hybrid_opts:
+                # Already covered by existing colors
+                continue
+            else:
+                # Need to add a color from this hybrid's options
+                # Prefer colors that might help with future hybrids
+                # Simple heuristic: pick the first available color
+                min_colors.add(min(hybrid_opts))
+
+    return {
+        "is_hybrid": is_hybrid,
+        "required_colors": required_colors,
+        "hybrid_options": hybrid_options,
+        "min_colors": min_colors,
+    }
+
+
+def has_hybrid_mana(mana_cost: str) -> bool:
+    """Quick check for hybrid mana symbol presence."""
+    if not mana_cost:
+        return False
+    return bool(HYBRID_PATTERN.search(mana_cost))
 
 
 class ScryfallClient:
@@ -176,7 +272,8 @@ class ScryfallClient:
             set_code: Set code
 
         Returns:
-            Dict with oracle_text, mana_cost, type_line, image_uri, scryfall_uri, etc.
+            Dict with oracle_text, mana_cost, type_line, image_uri, scryfall_uri,
+            and hybrid mana information.
         """
         data = self.get_card_by_name(card_name, set_code)
 
@@ -193,9 +290,13 @@ class ScryfallClient:
             if "image_uris" in front_face:
                 image_uri = front_face["image_uris"].get("normal")
 
+        # Parse mana requirements for hybrid detection
+        mana_cost = data.get("mana_cost", "")
+        mana_info = parse_mana_requirements(mana_cost)
+
         return {
             "oracle_text": data.get("oracle_text", ""),
-            "mana_cost": data.get("mana_cost", ""),
+            "mana_cost": mana_cost,
             "type_line": data.get("type_line", ""),
             "power": data.get("power"),
             "toughness": data.get("toughness"),
@@ -205,6 +306,10 @@ class ScryfallClient:
             "color_identity": data.get("color_identity", []),
             "image_uri": image_uri,
             "scryfall_uri": data.get("scryfall_uri"),
+            # Hybrid mana data
+            "is_hybrid": mana_info["is_hybrid"],
+            "min_colors_required": mana_info["min_colors"],
+            "hybrid_color_options": mana_info["hybrid_options"],
         }
 
     def batch_enrich_cards(

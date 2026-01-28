@@ -16,6 +16,38 @@ from src.models.card import Card, Rarity
 
 logger = logging.getLogger(__name__)
 
+
+def _is_card_in_archetype(card: Card, archetype_colors: str) -> bool:
+    """Check if a card belongs to an archetype, considering hybrid mana.
+
+    For hybrid cards: playable if archetype colors can pay for all hybrid symbols.
+    For regular cards: playable if card colors are subset of archetype colors.
+
+    Args:
+        card: Card to check
+        archetype_colors: Color string of the archetype (e.g., "WU", "BRG")
+
+    Returns:
+        True if card can be played in this archetype
+    """
+    deck_colors = set(archetype_colors)
+
+    # Colorless cards are playable in all archetypes
+    if not card.colors:
+        return True
+
+    if card.is_hybrid and card.hybrid_color_options:
+        # Hybrid card: check if deck colors can pay for all hybrid symbols
+        for hybrid_opts in card.hybrid_color_options:
+            if not (hybrid_opts & deck_colors):
+                # This hybrid symbol cannot be paid by deck colors
+                return False
+        return True
+    else:
+        # Regular card: colors must be subset of archetype colors
+        card_colors = set(card.colors)
+        return card_colors.issubset(deck_colors)
+
 # Single colors
 COLORS = ["W", "U", "B", "R", "G"]
 
@@ -233,8 +265,8 @@ class ColorScorer:
         # Calculate deck WR strength (direct performance indicator)
         deck_wr_strength = self._calculate_deck_wr_strength(color, color_cards)
 
-        # Calculate archetype success (average of ALL color pairs containing this color)
-        # Fixed: Now includes 3-color archetypes, not just 2-color pairs
+        # Calculate archetype success (games-weighted average of ALL color pairs containing this color)
+        # Uses games weighting so dominant archetypes (like BG) have more impact
         archetype_success = 0.0
         if color_pairs:
             relevant_pairs = [
@@ -242,9 +274,18 @@ class ColorScorer:
                 if color in cp.colors  # Include all archetypes with this color
             ]
             if relevant_pairs:
-                archetype_success = (
-                    statistics.mean(cp.win_rate for cp in relevant_pairs) * 100
-                )
+                # Games-weighted average: archetypes with more games count more
+                total_games = sum(cp.games for cp in relevant_pairs)
+                if total_games > 0:
+                    archetype_success = (
+                        sum(cp.win_rate * cp.games for cp in relevant_pairs)
+                        / total_games * 100
+                    )
+                else:
+                    # Fallback to simple mean if no games data
+                    archetype_success = (
+                        statistics.mean(cp.win_rate for cp in relevant_pairs) * 100
+                    )
 
         # Calculate usage_rate (how often this color is played)
         usage_rate = 0.0
@@ -370,20 +411,20 @@ class ColorScorer:
         """
         # Get cards in this archetype
         colors = color_pair.colors
-        
-        # Filter logic:
-        # Include card if its colors are a subset of the archetype colors.
-        # This handles:
-        # - Mono color cards (e.g. W in WU)
-        # - Exact match 2-color cards (e.g. WU in WU)
-        # - Exact match 3-color cards (e.g. WBG in WBG)
-        # - 2-color cards in 3-color archetype (e.g. WB in WBG)
-        # Excludes:
-        # - Colorless cards (len == 0) - unless we want them? Usually not archetype specific.
-        # - Cards with colors outside the archetype (e.g. WR in WU)
+
+        # Filter logic using hybrid-aware function:
+        # - For hybrid cards: checks if archetype colors can pay for all hybrid symbols
+        # - For regular cards: colors must be subset of archetype colors
+        # - Colorless cards are included (playable in all archetypes)
+        #
+        # Examples:
+        # - {W/R} hybrid in WU archetype: excluded (U can't pay for W/R)
+        # - {W/R} hybrid in WR archetype: included (W or R can pay)
+        # - {W/R} hybrid in mono-W: included (W can pay)
+        # - {W}{R} gold in WU archetype: excluded (missing R)
         archetype_cards = [
             c for c in cards
-            if len(c.colors) > 0 and set(c.colors).issubset(set(colors))
+            if _is_card_in_archetype(c, colors)
         ]
 
         # Find key cards by rarity

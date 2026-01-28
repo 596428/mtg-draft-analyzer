@@ -1631,6 +1631,20 @@ section h3 {
 }
 
 /* ============================================
+   AI ANALYSIS CARD HOVER
+   ============================================ */
+.ai-card-hover {
+    cursor: help;
+    position: relative;
+}
+
+.ai-card-hover:hover strong {
+    color: var(--accent-blue);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+
+/* ============================================
    FOOTER
    ============================================ */
 footer {

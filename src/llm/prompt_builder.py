@@ -470,9 +470,12 @@ class PromptBuilder:
 
         This generates detailed analysis for all 5 colors with:
         - Strengths and weaknesses
-        - Top 3 commons per color
+        - Top 3 commons per color (with oracle text)
         - P1P1 color priority
         """
+        # Build card lookup for oracle text inclusion
+        card_lookup = self._build_card_lookup(snapshot.all_cards)
+
         # Format color rankings
         color_rankings = "\n".join(
             f"{i+1}. **{c.color}** - Score: {c.strength_score:.1f}, "
@@ -494,8 +497,10 @@ class PromptBuilder:
             for c in snapshot.top_cards[:15]
         )
 
-        # Format detailed color data (with top commons/uncommons)
-        color_details = self._format_color_details(snapshot.top_colors)
+        # Format detailed color data (with top commons/uncommons and oracle text)
+        color_details = self._format_color_details(
+            snapshot.top_colors, card_lookup=card_lookup
+        )
 
         return self.color_strategy_template.format(
             expansion=snapshot.expansion,
@@ -507,7 +512,13 @@ class PromptBuilder:
         )
 
     def build_format_overview_prompt(self, snapshot: MetaSnapshot) -> str:
-        """Build comprehensive format overview prompt with detailed insight data."""
+        """Build comprehensive format overview prompt with detailed insight data.
+
+        Includes oracle text for key cards to help LLM understand card effects.
+        """
+        # Build card lookup for oracle text inclusion
+        card_lookup = self._build_card_lookup(snapshot.all_cards)
+
         # Format speed data (with defaults for missing data)
         fs = snapshot.format_speed
         tempo_ratio = fs.tempo_ratio if fs else 1.0
@@ -524,11 +535,15 @@ class PromptBuilder:
         dual_land_alsa = si.dual_land_alsa if si else 7.0
         fixer_wr_premium = si.fixer_wr_premium if si else 0.0
 
-        # Format detailed color data
-        color_details = self._format_color_details(snapshot.top_colors)
+        # Format detailed color data (with oracle text)
+        color_details = self._format_color_details(
+            snapshot.top_colors, card_lookup=card_lookup
+        )
 
-        # Format detailed archetype data
-        archetype_details = self._format_archetype_details(snapshot.top_archetypes[:5])
+        # Format detailed archetype data (with oracle text)
+        archetype_details = self._format_archetype_details(
+            snapshot.top_archetypes[:5], card_lookup=card_lookup
+        )
 
         # Get set mechanics if available
         set_mechanics = get_set_mechanics(snapshot.expansion)
@@ -619,10 +634,15 @@ class PromptBuilder:
         """Build archetype deep dive prompt (section 2 only).
 
         This generates the "🏆 상위 아키타입 심층 분석" section independently
-        to avoid token truncation issues.
+        to avoid token truncation issues. Includes oracle text for key cards.
         """
-        # Format detailed archetype data
-        archetype_details = self._format_archetype_details(snapshot.top_archetypes[:5])
+        # Build card lookup for oracle text inclusion
+        card_lookup = self._build_card_lookup(snapshot.all_cards)
+
+        # Format detailed archetype data (with oracle text)
+        archetype_details = self._format_archetype_details(
+            snapshot.top_archetypes[:5], card_lookup=card_lookup
+        )
 
         # Get set mechanics if available
         set_mechanics = get_set_mechanics(snapshot.expansion)
@@ -639,19 +659,80 @@ class PromptBuilder:
             trophy_stats_section=trophy_stats_section,
         )
 
-    def _format_color_details(self, colors: list) -> str:
-        """Format detailed color analysis with bomb_factor, depth, and top cards."""
+    def _build_card_lookup(self, cards: list[Card]) -> dict[str, Card]:
+        """Build card name → Card object lookup dictionary.
+
+        Args:
+            cards: List of Card objects from snapshot.all_cards
+
+        Returns:
+            Dictionary mapping card name to Card object
+        """
+        return {card.name: card for card in cards}
+
+    def _format_card_with_text(
+        self, name: str, card_lookup: dict[str, Card], max_text_len: int = 150
+    ) -> str:
+        """Format card name with oracle text if available.
+
+        Args:
+            name: Card name to look up
+            card_lookup: Dictionary mapping card names to Card objects
+            max_text_len: Maximum length for oracle text (default 150)
+
+        Returns:
+            Formatted string with card name and oracle text
+        """
+        card = card_lookup.get(name)
+        if card and card.oracle_text:
+            text = card.oracle_text[:max_text_len]
+            if len(card.oracle_text) > max_text_len:
+                text += "..."
+            return f"**{name}**: {text}"
+        return f"**{name}**"
+
+    def _format_color_details(
+        self, colors: list, card_lookup: dict[str, Card] | None = None
+    ) -> str:
+        """Format detailed color analysis with bomb_factor, depth, and top cards.
+
+        Args:
+            colors: List of ColorScore objects
+            card_lookup: Optional card lookup dict for oracle text inclusion
+        """
         lines = []
         for cs in colors:
-            top_commons = ", ".join(cs.top_commons[:3]) if cs.top_commons else "N/A"
-            top_uncommons = ", ".join(cs.top_uncommons[:3]) if cs.top_uncommons else "N/A"
+            # Format top commons with oracle text if card_lookup provided
+            if card_lookup and cs.top_commons:
+                top_commons_text = "\n".join(
+                    f"  - {self._format_card_with_text(name, card_lookup)}"
+                    for name in cs.top_commons[:3]
+                )
+                top_commons_section = f"- 상위 커먼:\n{top_commons_text}"
+            else:
+                top_commons = ", ".join(cs.top_commons[:3]) if cs.top_commons else "N/A"
+                top_commons_section = f"- 상위 커먼: {top_commons}"
+
+            # Format top uncommons with oracle text if card_lookup provided
+            if card_lookup and cs.top_uncommons:
+                top_uncommons_text = "\n".join(
+                    f"  - {self._format_card_with_text(name, card_lookup)}"
+                    for name in cs.top_uncommons[:3]
+                )
+                top_uncommons_section = f"- 상위 언커먼:\n{top_uncommons_text}"
+            else:
+                top_uncommons = (
+                    ", ".join(cs.top_uncommons[:3]) if cs.top_uncommons else "N/A"
+                )
+                top_uncommons_section = f"- 상위 언커먼: {top_uncommons}"
+
             lines.append(f"""### {cs.color} (Rank #{cs.rank})
 - 강도 점수: {cs.strength_score:.1f}
 - 플레이어블: {cs.playable_count}장
 - 폭탄 강도: {cs.bomb_factor:.2f}
 - 카드 풀 깊이: {cs.depth_factor:.2f}
-- 상위 커먼: {top_commons}
-- 상위 언커먼: {top_uncommons}""")
+{top_commons_section}
+{top_uncommons_section}""")
         return "\n\n".join(lines) if lines else "색상 데이터 없음"
 
     def _format_trophy_stats(self, trophy_stats) -> str:
@@ -711,22 +792,61 @@ class PromptBuilder:
 
         return "\n".join(lines)
 
-    def _format_archetype_details(self, archetypes: list) -> str:
-        """Format detailed archetype analysis with synergy and key cards."""
+    def _format_archetype_details(
+        self, archetypes: list, card_lookup: dict[str, Card] | None = None
+    ) -> str:
+        """Format detailed archetype analysis with synergy and key cards.
+
+        Args:
+            archetypes: List of Archetype objects
+            card_lookup: Optional card lookup dict for oracle text inclusion
+        """
         lines = []
         for a in archetypes:
-            key_commons = ", ".join(a.key_commons[:3]) if a.key_commons else "N/A"
+            # Format key commons with oracle text if card_lookup provided
+            if card_lookup and a.key_commons:
+                key_commons_text = "\n".join(
+                    f"  - {self._format_card_with_text(name, card_lookup)}"
+                    for name in a.key_commons[:3]
+                )
+                key_commons_section = f"- 핵심 커먼:\n{key_commons_text}"
+            else:
+                key_commons = ", ".join(a.key_commons[:3]) if a.key_commons else "N/A"
+                key_commons_section = f"- 핵심 커먼: {key_commons}"
+
+            # Format synergy cards with oracle text if card_lookup provided
+            if card_lookup and a.synergy_cards:
+                synergy_text = "\n".join(
+                    f"  - {self._format_card_with_text(name, card_lookup)}"
+                    for name in a.synergy_cards[:3]
+                )
+                synergy_section = f"- 시너지 카드 (이 아키타입 전용):\n{synergy_text}"
+            else:
+                synergy_cards = (
+                    ", ".join(a.synergy_cards[:3]) if a.synergy_cards else "N/A"
+                )
+                synergy_section = f"- 시너지 카드 (이 아키타입 전용): {synergy_cards}"
+
+            # Format signpost with oracle text if card_lookup provided
+            if card_lookup and a.signpost_uncommon:
+                signpost_section = f"- Signpost: {self._format_card_with_text(a.signpost_uncommon, card_lookup)}"
+            else:
+                signpost = a.signpost_uncommon or "N/A"
+                signpost_section = f"- Signpost: {signpost}"
+
             bombs = ", ".join(a.bombs[:3]) if a.bombs else "N/A"
             trap_cards = ", ".join(a.trap_cards[:3]) if a.trap_cards else "N/A"
-            synergy_cards = ", ".join(a.synergy_cards[:3]) if a.synergy_cards else "N/A"
-            signpost = a.signpost_uncommon or "N/A"
 
             # Format splash variant data
             variant_info = "없음"
-            if hasattr(a, 'variants') and a.variants:
+            if hasattr(a, "variants") and a.variants:
                 variant_lines = []
                 for v in a.variants[:3]:  # Top 3 splash variants
-                    delta = f"+{v.win_rate_delta*100:.1f}" if v.win_rate_delta > 0 else f"{v.win_rate_delta*100:.1f}"
+                    delta = (
+                        f"+{v.win_rate_delta*100:.1f}"
+                        if v.win_rate_delta > 0
+                        else f"{v.win_rate_delta*100:.1f}"
+                    )
                     variant_lines.append(f"+{v.added_color}: {v.win_rate:.1%} ({delta}%p)")
                 variant_info = ", ".join(variant_lines)
 
@@ -736,9 +856,9 @@ class PromptBuilder:
 - 메타 점유율: {a.meta_share:.1%}
 - 시너지 리프트: {a.synergy_lift:.2%} (표준편차: {a.synergy_std:.3f})
 - 스플래시 옵션: {variant_info}
-- Signpost: {signpost}
-- 핵심 커먼: {key_commons}
-- 시너지 카드 (이 아키타입 전용): {synergy_cards}
+{signpost_section}
+{key_commons_section}
+{synergy_section}
 - 폭탄: {bombs}
 - 이 아키타입 트랩: {trap_cards}""")
         return "\n\n".join(lines) if lines else "아키타입 데이터 없음"

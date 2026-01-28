@@ -17,8 +17,13 @@ from src.models.meta import MetaSnapshot
 logger = logging.getLogger(__name__)
 
 
-def simple_markdown_to_html(text: str) -> str:
-    """Convert simple markdown to HTML for LLM analysis display."""
+def simple_markdown_to_html(text: str, card_image_lookup: dict[str, str] | None = None) -> str:
+    """Convert simple markdown to HTML for LLM analysis display.
+
+    Args:
+        text: Markdown text from LLM
+        card_image_lookup: Optional dict mapping card name -> Scryfall image URL
+    """
     if not text:
         return ""
 
@@ -29,8 +34,17 @@ def simple_markdown_to_html(text: str) -> str:
     text = re.sub(r"^### (.+)$", r"<h4>\1</h4>", text, flags=re.MULTILINE)
     text = re.sub(r"^## (.+)$", r"<h3>\1</h3>", text, flags=re.MULTILINE)
 
-    # Convert bold (**text**)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    # Convert bold (**text**) with card hover support
+    def replace_bold(match: re.Match) -> str:
+        content = match.group(1)
+        if card_image_lookup and content in card_image_lookup:
+            image_url = card_image_lookup[content]
+            # HTML escape the image URL
+            safe_url = image_url.replace('"', '&quot;')
+            return f'<span class="ai-card-hover" data-card-image="{safe_url}"><strong>{content}</strong></span>'
+        return f"<strong>{content}</strong>"
+
+    text = re.sub(r"\*\*(.+?)\*\*", replace_bold, text)
 
     # Convert bullet points (- item)
     lines = text.split("\n")
@@ -233,6 +247,13 @@ class HtmlReportGenerator:
         """
         template = self.env.from_string(self._get_template_content())
         context = self._prepare_context(snapshot, include_llm)
+
+        # Extract card_image_lookup and set up markdown filter with it
+        card_image_lookup = context.pop("_card_image_lookup", None)
+        self.env.filters["markdown"] = lambda text, lookup=card_image_lookup: (
+            Markup(simple_markdown_to_html(text, lookup)) if text else ""
+        )
+
         return template.render(**context)
 
     def _get_archetype_cards(
@@ -350,6 +371,12 @@ class HtmlReportGenerator:
         # Prepare common context
         context = self._prepare_context(snapshot, include_llm)
 
+        # Extract card_image_lookup and set up markdown filter with it
+        card_image_lookup = context.pop("_card_image_lookup", None)
+        self.env.filters["markdown"] = lambda text, lookup=card_image_lookup: (
+            Markup(simple_markdown_to_html(text, lookup)) if text else ""
+        )
+
         # Generate each page
         for filename, template_name, active_page in self.PAGES:
             try:
@@ -417,6 +444,13 @@ class HtmlReportGenerator:
             if card.grade in ("S", "A+"):
                 bomb_names.add(card.name)
 
+        # Build card name -> image URL lookup for AI analysis hover
+        card_image_lookup = {
+            card.name: card.image_uri
+            for card in snapshot.all_cards
+            if card.image_uri
+        }
+
         return {
             # Meta info
             "expansion": snapshot.expansion,
@@ -467,4 +501,7 @@ class HtmlReportGenerator:
             "llm_format_overview": snapshot.llm_format_overview if include_llm else None,
             "llm_format_characteristics": snapshot.llm_format_characteristics if include_llm else None,
             "llm_archetype_deep_dive": snapshot.llm_archetype_deep_dive if include_llm else None,
+
+            # Card image lookup for AI analysis hover
+            "_card_image_lookup": card_image_lookup,
         }

@@ -297,8 +297,8 @@ function setupTrophyCardPreview() {
         preview.style.top = top + 'px';
     }
 
-    // Attach event listeners to trophy card hover elements
-    document.querySelectorAll('.trophy-card-hover').forEach(el => {
+    // Attach event listeners to trophy card hover elements and AI analysis card names
+    document.querySelectorAll('.trophy-card-hover, .ai-card-hover').forEach(el => {
         el.addEventListener('mouseenter', showPreview);
         el.addEventListener('mouseleave', hidePreview);
         el.addEventListener('mousemove', positionPreview);
